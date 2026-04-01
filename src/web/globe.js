@@ -164,6 +164,7 @@ class GeodesicGlobe {
         this._riftEdges    = new Set();
         this._riftLineMesh = null;    // THREE.LineSegments (red)
         this._hoverLineMesh = null;   // THREE.LineSegments (yellow highlight)
+        this._boundaryMesh = null;
         this._hoveredEdge  = null;    // {cell_a, cell_b} | null
 
         // Edge-by-cell lookup: cellIdx → [{cell_a, cell_b}, ...]
@@ -325,6 +326,15 @@ class GeodesicGlobe {
         this._hoverLineMesh = new THREE.LineSegments(hoverGeo, hoverMat);
         this._hoverLineMesh.visible = false;
         this._scene.add(this._hoverLineMesh);
+
+        // --- Boundary lines (updated each simulation step) ---
+        const bndGeo = new THREE.BufferGeometry();
+        bndGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
+        bndGeo.setAttribute('color',    new THREE.BufferAttribute(new Float32Array(0), 3));
+        const bndMat = new THREE.LineBasicMaterial({ vertexColors: true });
+        this._boundaryMesh = new THREE.LineSegments(bndGeo, bndMat);
+        this._boundaryMesh.visible = false;
+        this._scene.add(this._boundaryMesh);
     }
 
     // ── Rift edge helpers ────────────────────────────────────────────────────
@@ -581,7 +591,53 @@ class GeodesicGlobe {
                 }
             }
         }
+        if (result.boundaries) this.applyBoundaries(result.boundaries);  // NEW
         this._refreshColors();
+    }
+
+    applyBoundaries(boundaries) {
+        if (!this._boundaryMesh || !this._grid) return;
+        if (!boundaries || !boundaries.length) {
+            this._boundaryMesh.geometry.setDrawRange(0, 0);
+            return;
+        }
+
+        const SCALE = 1.005;  // lift slightly above sphere surface
+        const verts = this._grid.vertices;
+
+        const TYPE_COLORS = {
+            ridge:      [1.0, 0.6, 0.0],   // orange
+            subduction: [0.8, 0.1, 0.1],   // red
+            transform:  [0.9, 0.85, 0.0],  // yellow
+            collision:  [1.0, 0.5, 0.65],  // pink
+        };
+
+        const nLines = boundaries.length;
+        const pos = new Float32Array(nLines * 6);
+        const col = new Float32Array(nLines * 6);
+
+        for (let i = 0; i < nLines; i++) {
+            const { type, cell_a, cell_b } = boundaries[i];
+            const va = verts[cell_a], vb = verts[cell_b];
+            const c  = TYPE_COLORS[type] || [0.6, 0.6, 0.6];
+            const k  = i * 6;
+            pos[k]   = va[0]*SCALE; pos[k+1] = va[1]*SCALE; pos[k+2] = va[2]*SCALE;
+            pos[k+3] = vb[0]*SCALE; pos[k+4] = vb[1]*SCALE; pos[k+5] = vb[2]*SCALE;
+            col[k]   = c[0]; col[k+1] = c[1]; col[k+2] = c[2];
+            col[k+3] = c[0]; col[k+4] = c[1]; col[k+5] = c[2];
+        }
+
+        this._boundaryMesh.geometry.setAttribute(
+            'position', new THREE.BufferAttribute(pos, 3));
+        this._boundaryMesh.geometry.setAttribute(
+            'color', new THREE.BufferAttribute(col, 3));
+        this._boundaryMesh.geometry.setDrawRange(0, nLines * 2);
+        this._boundaryMesh.geometry.attributes.position.needsUpdate = true;
+        this._boundaryMesh.geometry.attributes.color.needsUpdate = true;
+    }
+
+    toggleBoundaries(visible) {
+        if (this._boundaryMesh) this._boundaryMesh.visible = visible;
     }
 
     // ── Mode / tool setters ──────────────────────────────────────────────────

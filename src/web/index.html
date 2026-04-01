@@ -90,38 +90,49 @@
         <div class="legend-item"><div class="legend-swatch" style="background:#c8a020"></div><span>Craton</span></div>
         <div class="legend-item"><div class="legend-swatch" style="background:#d04020"></div><span>Rift</span></div>
       </div>
+      <div style="margin-top:6px">
+        <button class="tool-btn" id="btn-boundaries" title="Toggle boundary lines (B)">
+          ⚡ Boundaries
+        </button>
+      </div>
     </div>
 
     <!-- Simulation parameters -->
     <div class="sidebar-section">
       <h2>Simulation</h2>
       <div class="param-row">
-        <label>Duration (Ma)</label>
-        <input type="number" id="param-time" value="500" min="50" max="2000" step="50">
-      </div>
-      <div class="param-row">
         <label>Num plates</label>
-        <input type="number" id="param-plates" value="7" min="3" max="15">
+        <input type="number" id="param-plates" value="7" min="3" max="20">
       </div>
       <div class="param-row">
         <label>CO₂ (ppm)</label>
         <input type="number" id="param-co2" value="400" min="100" max="4000">
       </div>
       <div class="param-row">
+        <label>Timestep (Ma)</label>
+        <input type="number" id="param-timestep" value="10" min="1" max="50">
+      </div>
+      <div class="param-row">
         <label>Seed</label>
         <input type="number" id="param-seed" value="42">
       </div>
 
-      <button class="btn" id="btn-simulate">▶ Run Simulation</button>
-      <button class="btn" id="btn-reset-view" style="margin-top:2px">⌖ Reset View</button>
+      <button class="btn" id="btn-sim-init">⚙ Initialise</button>
+    </div>
 
-      <!-- Progress -->
-      <div id="sim-progress-wrap">
-        <div class="progress-bar">
-          <div class="progress-fill" id="progress-fill"></div>
-        </div>
-        <div class="progress-text" id="progress-text">0 / 500 Ma</div>
+    <!-- Timeline (shown after init) -->
+    <div class="sidebar-section" id="timeline-section" style="display:none">
+      <h2>Timeline — <span id="tl-time">0 Ma</span></h2>
+      <div class="timeline-controls">
+        <button class="tool-btn" id="btn-step-back"  title="Step back">◀</button>
+        <button class="tool-btn" id="btn-play-pause" title="Play / Pause (P)">▶</button>
+        <button class="tool-btn" id="btn-step-fwd"   title="Step forward">▶|</button>
       </div>
+      <input type="range" id="timeline-slider" min="0" max="0" value="0"
+             style="width:100%;margin:6px 0">
+      <button class="btn" id="btn-use-state" style="margin-top:4px">
+        ✓ Use This State
+      </button>
     </div>
 
     <!-- Paint stats -->

@@ -87,6 +87,13 @@ class GeoForgeUI {
             this._globe._controls.target.set(0, 0, 0);
             this._globe._controls.update();
         });
+
+        document.getElementById('btn-boundaries')?.addEventListener('click', () => {
+            const btn = document.getElementById('btn-boundaries');
+            const on  = !btn.classList.contains('active');
+            btn.classList.toggle('active', on);
+            this._globe.toggleBoundaries(on);
+        });
     }
 
     _setColorMode(mode) {
@@ -358,6 +365,7 @@ class GeoForgeUI {
                 case '4': this._setColorMode('precipitation'); break;
                 case '5': this._setColorMode('koppen');        break;
                 case '6': this._setColorMode('plates');        break;
+                case 'b': document.getElementById('btn-boundaries')?.click(); break;
             }
         });
 
