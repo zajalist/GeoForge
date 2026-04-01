@@ -81,7 +81,7 @@ const API = {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify(params),
         });
-        if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
         return r.json();
     },
 
@@ -97,12 +97,13 @@ const API = {
             headers: {'Content-Type': 'application/json'},
             body: JSON.stringify({ steps }),
         });
-        if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+        if (!r.ok) throw new Error((await r.json().catch(() => ({}))).detail || r.statusText);
         return r.json();
     },
 
     /** Clear the active step-by-step session. */
     async simReset() {
-        await fetch('/api/sim/reset', { method: 'POST' });
+        const r = await fetch('/api/sim/reset', { method: 'POST' });
+        if (!r.ok) throw new Error(`Reset failed: ${r.status}`);
     },
 };
