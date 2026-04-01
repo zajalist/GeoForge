@@ -160,9 +160,21 @@ class GeodesicGlobe {
         // Wireframe visibility
         this._wireVisible = false;
 
+        // Rift edges: Set of 'minIdx_maxIdx' strings; rendered as red lines
+        this._riftEdges    = new Set();
+        this._riftLineMesh = null;    // THREE.LineSegments (red)
+        this._hoverLineMesh = null;   // THREE.LineSegments (yellow highlight)
+        this._hoveredEdge  = null;    // {cell_a, cell_b} | null
+
+        // Edge-by-cell lookup: cellIdx → [{cell_a, cell_b}, ...]
+        this._edgesByCell  = null;
+
         // Callbacks
         this.onCellHover = null;  // (cellIdx, lat, lon) => void
         this.onPaintChanged = null; // () => void
+        this.onContiguityError = null; // (msg: string) => void
+
+        this._errorTimer = null;
 
         this._init();
     }
@@ -286,6 +298,107 @@ class GeodesicGlobe {
         // Store face→cell mapping for fast picking
         // For face f, the 3 vertices are cells a,b,c
         this._faceCells = faces;  // direct reference
+
+        // --- Edge-by-cell lookup (for rift edge picking) ---
+        this._edgesByCell = new Array(N).fill(null).map(() => []);
+        if (grid.edges) {
+            for (const [a, b] of grid.edges) {
+                this._edgesByCell[a].push({ cell_a: a, cell_b: b });
+                this._edgesByCell[b].push({ cell_a: a, cell_b: b });
+            }
+        }
+
+        // --- Rift edge LineSegments (initially empty, red) ---
+        const riftGeo = new THREE.BufferGeometry();
+        riftGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(0), 3));
+        const riftMat = new THREE.LineBasicMaterial({ color: 0xff2200 });
+        this._riftLineMesh = new THREE.LineSegments(riftGeo, riftMat);
+        this._scene.add(this._riftLineMesh);
+
+        // --- Hover edge highlight (single line, yellow) ---
+        const hoverPos = new Float32Array(6);
+        const hoverGeo = new THREE.BufferGeometry();
+        hoverGeo.setAttribute('position', new THREE.BufferAttribute(hoverPos, 3));
+        const hoverMat = new THREE.LineBasicMaterial({ color: 0xffee00 });
+        this._hoverLineMesh = new THREE.LineSegments(hoverGeo, hoverMat);
+        this._hoverLineMesh.visible = false;
+        this._scene.add(this._hoverLineMesh);
+    }
+
+    // ── Rift edge helpers ────────────────────────────────────────────────────
+
+    _refreshRiftLines() {
+        if (!this._riftLineMesh || !this._grid) return;
+        const verts = this._grid.vertices;
+        const SCALE = 1.003;
+
+        const pts = new Float32Array(this._riftEdges.size * 6);
+        let i = 0;
+        for (const key of this._riftEdges) {
+            const [a, b] = key.split('_').map(Number);
+            const va = verts[a], vb = verts[b];
+            pts[i++] = va[0]*SCALE; pts[i++] = va[1]*SCALE; pts[i++] = va[2]*SCALE;
+            pts[i++] = vb[0]*SCALE; pts[i++] = vb[1]*SCALE; pts[i++] = vb[2]*SCALE;
+        }
+
+        this._riftLineMesh.geometry.setAttribute(
+            'position', new THREE.BufferAttribute(pts, 3));
+        this._riftLineMesh.geometry.attributes.position.needsUpdate = true;
+        this._riftLineMesh.geometry.setDrawRange(0, this._riftEdges.size * 2);
+    }
+
+    _pickEdge(event) {
+        if (!this._edgesByCell || !this._mesh) return null;
+
+        // Step 1: find hovered cell
+        const cellIdx = this._pickCell(event);
+        if (cellIdx < 0) return null;
+
+        // Step 2: gather edges of this cell and its immediate neighbors
+        const candidates = [...(this._edgesByCell[cellIdx] || [])];
+        for (const nb of this._grid.adjacency[cellIdx]) {
+            for (const edge of (this._edgesByCell[nb] || [])) {
+                candidates.push(edge);
+            }
+        }
+        if (!candidates.length) return null;
+
+        // Step 3: cast ray and find closest edge midpoint
+        const rect = this._renderer.domElement.getBoundingClientRect();
+        const mx   = ((event.clientX - rect.left) / rect.width)  * 2 - 1;
+        const my   = -((event.clientY - rect.top)  / rect.height) * 2 + 1;
+        this._raycaster.setFromCamera(new THREE.Vector2(mx, my), this._camera);
+        const ray = this._raycaster.ray;
+
+        const verts = this._grid.vertices;
+        let bestEdge = null, bestDist = Infinity;
+
+        for (const { cell_a, cell_b } of candidates) {
+            const va = verts[cell_a], vb = verts[cell_b];
+            const mid = new THREE.Vector3(
+                (va[0]+vb[0])/2, (va[1]+vb[1])/2, (va[2]+vb[2])/2);
+            const d = ray.distanceToPoint(mid);
+            if (d < bestDist) { bestDist = d; bestEdge = { cell_a, cell_b }; }
+        }
+
+        return bestDist < 0.04 ? bestEdge : null;
+    }
+
+    _toggleRiftEdge({ cell_a, cell_b }) {
+        const a = Math.min(cell_a, cell_b);
+        const b = Math.max(cell_a, cell_b);
+        const key = `${a}_${b}`;
+        if (this._riftEdges.has(key)) {
+            this._riftEdges.delete(key);
+        } else {
+            this._riftEdges.add(key);
+        }
+        this._refreshRiftLines();
+        if (this.onPaintChanged) this.onPaintChanged();
+    }
+
+    getRiftEdges() {
+        return Array.from(this._riftEdges).map(k => k.split('_').map(Number));
     }
 
     // ── Colour refresh ───────────────────────────────────────────────────────
@@ -337,12 +450,71 @@ class GeodesicGlobe {
         buf.needsUpdate = true;
     }
 
+    // ── Contiguity helpers ────────────────────────────────────────────────────
+
+    _hasContinentalCells() {
+        if (!this._paintState) return false;
+        for (let i = 0; i < this._N; i++) {
+            if (this._paintState[i] === 1 || this._paintState[i] === 2) return true;
+        }
+        return false;
+    }
+
+    _isAdjacentToContinent(cellIdx) {
+        if (!this._paintState || !this._grid) return false;
+        // The cell itself counts as adjacent (allows re-painting)
+        if (this._paintState[cellIdx] === 1 || this._paintState[cellIdx] === 2) return true;
+        // Any neighbor that is continental/craton counts
+        for (const nb of this._grid.adjacency[cellIdx]) {
+            if (this._paintState[nb] === 1 || this._paintState[nb] === 2) return true;
+        }
+        return false;
+    }
+
+    _countCratonRegions() {
+        if (!this._paintState) return 0;
+        const visited = new Set();
+        let regions = 0;
+        for (let start = 0; start < this._N; start++) {
+            if (this._paintState[start] !== 2) continue;
+            if (visited.has(start)) continue;
+            regions++;
+            const q = [start];
+            visited.add(start);
+            while (q.length) {
+                const cur = q.pop();
+                for (const nb of this._grid.adjacency[cur]) {
+                    if (!visited.has(nb) && this._paintState[nb] === 2) {
+                        visited.add(nb);
+                        q.push(nb);
+                    }
+                }
+            }
+        }
+        return regions;
+    }
+
     // ── Cell painting ────────────────────────────────────────────────────────
 
     paintCell(cellIdx, toolType) {
         if (!this._paintState || cellIdx < 0 || cellIdx >= this._N) return;
+        if (toolType === 'rift') return;  // rift is edge-based, not cell-based
 
-        const typeMap = { ocean: 0, continental: 1, craton: 2, rift: 3 };
+        // Contiguity enforcement: new continental/craton cells must be adjacent to existing land
+        if ((toolType === 'continental' || toolType === 'craton') && this._hasContinentalCells()) {
+            // Check all cells in the brush radius — reject if none is adjacent
+            const affected = this._getCellsInRadius(cellIdx, this._brushRadius);
+            const anyAdjacent = affected.some(idx => this._isAdjacentToContinent(idx));
+            if (!anyAdjacent) {
+                if (this.onContiguityError) {
+                    this.onContiguityError(
+                        'Continental cells must be contiguous — paint adjacent to existing land.');
+                }
+                return;
+            }
+        }
+
+        const typeMap = { ocean: 0, continental: 1, craton: 2 };
         const typeVal = typeMap[toolType] ?? 1;
 
         // Paint with brush radius
@@ -430,9 +602,11 @@ class GeodesicGlobe {
     // ── Getters ───────────────────────────────────────────────────────────────
 
     getPaintedCells(type) {
+        if (type === 'rift') return [];  // rift is now edge-based; use getRiftEdges()
         if (!this._paintState) return [];
-        const typeMap = { ocean: 0, continental: 1, craton: 2, rift: 3 };
+        const typeMap = { ocean: 0, continental: 1, craton: 2 };
         const v = typeMap[type];
+        if (v === undefined) return [];
         const result = [];
         for (let i = 0; i < this._N; i++) {
             if (this._paintState[i] === v) result.push(i);
@@ -441,16 +615,20 @@ class GeodesicGlobe {
     }
 
     getPaintStats() {
-        if (!this._paintState) return { ocean: 0, continental: 0, craton: 0, rift: 0 };
-        let ocean=0, cont=0, craton=0, rift=0;
+        if (!this._paintState) return { ocean: 0, continental: 0, craton: 0, craton_regions: 0, rift: 0, total: 0 };
+        let ocean=0, cont=0, craton=0;
         for (let i = 0; i < this._N; i++) {
             const v = this._paintState[i];
             if (v===0) ocean++;
             else if (v===1) cont++;
             else if (v===2) craton++;
-            else if (v===3) rift++;
         }
-        return { ocean, continental: cont, craton, rift, total: this._N };
+        return {
+            ocean, continental: cont, craton,
+            craton_regions: this._countCratonRegions(),
+            rift: this._riftEdges ? this._riftEdges.size : 0,
+            total: this._N
+        };
     }
 
     getBrushRadius()  { return this._brushRadius; }
@@ -512,6 +690,24 @@ class GeodesicGlobe {
                 this.paintCell(cellIdx, this._tool);
             }
         }
+
+        // Rift edge hover highlight
+        if (this._tool === 'rift') {
+            const edge = this._pickEdge(e);
+            this._hoveredEdge = edge;
+            if (edge && this._hoverLineMesh) {
+                const verts = this._grid.vertices;
+                const SCALE = 1.003;
+                const va = verts[edge.cell_a], vb = verts[edge.cell_b];
+                const pos = this._hoverLineMesh.geometry.attributes.position;
+                pos.array[0] = va[0]*SCALE; pos.array[1] = va[1]*SCALE; pos.array[2] = va[2]*SCALE;
+                pos.array[3] = vb[0]*SCALE; pos.array[4] = vb[1]*SCALE; pos.array[5] = vb[2]*SCALE;
+                pos.needsUpdate = true;
+                this._hoverLineMesh.visible = true;
+            } else if (this._hoverLineMesh) {
+                this._hoverLineMesh.visible = false;
+            }
+        }
     }
 
     _onMouseDown(e) {
@@ -519,6 +715,13 @@ class GeodesicGlobe {
         e.preventDefault();
         this._mouseDown = true;
         this._lastPainted = -1;
+
+        if (this._tool === 'rift') {
+            const edge = this._pickEdge(e);
+            if (edge) this._toggleRiftEdge(edge);
+            return;
+        }
+
         const cellIdx = this._pickCell(e);
         if (cellIdx >= 0) {
             this._lastPainted = cellIdx;
