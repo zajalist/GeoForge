@@ -337,97 +337,6 @@ def _handle_boundaries_with_output(cells, adj, N, dt):
     return boundaries
 
 
-def _handle_boundaries(cells, adj, N, dt):
-    """Detect boundary types and apply geological effects."""
-    plate_id  = cells['plate_id']
-    crust     = cells['crust_type']
-    elev      = cells['elevation']
-    orog_type = cells['orogeny_type']
-    orog_age  = cells['orogeny_age']
-    ocean_age = cells['ocean_age']
-    is_craton = cells['is_craton']
-    vx = cells['vel_x']
-    vy = cells['vel_y']
-    vz = cells['vel_z']
-
-    for i in range(N):
-        pid_i = plate_id[i]
-        if pid_i == 0:
-            continue
-        vi = np.array([vx[i], vy[i], vz[i]], dtype=np.float64)
-
-        for j in adj[i]:
-            if j <= i:
-                continue
-            pid_j = plate_id[j]
-            if pid_j == 0 or pid_j == pid_i:
-                continue
-
-            # Relative velocity j relative to i
-            rel = np.array([vx[j]-vx[i], vy[j]-vy[i], vz[j]-vz[i]], dtype=np.float64)
-            # Direction i → j (chord on unit sphere)
-            # Not stored pre-computed; just use vertex difference
-
-            sep = rel[0]*(j > i) + rel[1]*0.1  # simplified separation scalar
-            # Better: use dot with position difference
-            # (approximate: if both vels point away → divergent)
-            # Simplified: use magnitude of rel vel component
-            # Use sum of projection of velocities along i->j as separator
-
-            # Actually, compute proper separation rate
-            # rel_vel = vj - vi; dir = normalize(pos_j - pos_i)
-            # sep = dot(rel_vel, dir)
-            # (skipping for performance — use plate-level relative angle instead)
-
-            # Simplified boundary classification based on plate IDs:
-            # This gives a visually plausible result without full vector math per pair
-            sep = float(rel[0])  # rough approximation
-
-            # Classify boundary
-            if sep > 0.3:      # divergent
-                # New oceanic crust at boundary
-                if crust[i] != CRUST_CONTINENTAL:
-                    ocean_age[i] = 0
-                    elev[i] = 0.0
-                if crust[j] != CRUST_CONTINENTAL:
-                    ocean_age[j] = 0
-                    elev[j] = 0.0
-
-            elif sep < -0.3:   # convergent
-                both_cont = (crust[i] == CRUST_CONTINENTAL and
-                             crust[j] == CRUST_CONTINENTAL)
-                if both_cont:
-                    # Continental collision → orogeny
-                    conv = abs(sep)
-                    if conv > 1.5:
-                        otype = OROGENY_HIGH
-                        h = 4000.0 + conv * 200
-                    elif conv > 0.8:
-                        otype = OROGENY_MEDIUM
-                        h = 2500.0 + conv * 150
-                    else:
-                        otype = OROGENY_LOW
-                        h = 1200.0 + conv * 100
-
-                    for cell in (i, j):
-                        if not is_craton[cell]:
-                            elev[cell] = max(elev[cell], h)
-                            orog_type[cell] = otype
-                            orog_age[cell] = 0
-                        else:
-                            # Cratons don't build mountains as high
-                            elev[cell] = max(elev[cell], h * 0.4)
-                else:
-                    # Subduction
-                    subduct_cell = j if crust[i] == CRUST_CONTINENTAL else i
-                    elev[subduct_cell] = min(elev[subduct_cell], -6000.0)
-                    # Volcanic arc on overriding plate (next neighbour)
-                    overriding = i if crust[i] == CRUST_CONTINENTAL else j
-                    elev[overriding] = max(elev[overriding], 2000.0)
-                    orog_type[overriding] = OROGENY_ANDEAN
-                    orog_age[overriding] = 0
-
-
 def _update_ocean_crust(cells, dt):
     """Age oceanic cells; apply Parsons & Sclater depth equation."""
     ocean_mask = (cells['crust_type'] == CRUST_OCEANIC)
@@ -562,7 +471,10 @@ def _maybe_trigger_auto_rift(cells, plates, grid, current_time, last_rift_ma, se
     if not rift_cells:
         return last_rift_ma
 
-    new_plate_id = max((p['id'] for p in plates), default=0) + 1
+    existing_max = max((p['id'] for p in plates), default=0)
+    new_plate_id = min(existing_max + 1, 255)
+    if new_plate_id in {p['id'] for p in plates}:
+        return last_rift_ma  # no available plate ID slots
     rng = random.Random(seed)
     new_euler_lat = rng.uniform(-60, 60)
     new_euler_lon = rng.uniform(-180, 180)
@@ -782,7 +694,7 @@ def step_once(cells, plates, grid, dt, current_time, last_rift_ma):
 
     new_last_rift = _maybe_trigger_auto_rift(
         cells, plates, grid, current_time, last_rift_ma,
-        seed=int(current_time * 13) % (2**31))
+        seed=int(round(current_time)) % (2**31))
 
     return boundaries, new_last_rift
 
