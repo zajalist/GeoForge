@@ -7,9 +7,10 @@
 
 class GeoForgeUI {
     constructor(globe) {
-        this._globe    = globe;
-        this._polling  = null;   // setInterval handle for progress polling
-        this._running  = false;
+        this._globe      = globe;
+        this._polling    = null;   // setInterval handle for progress polling
+        this._running    = false;
+        this._errorTimer = null;
     }
 
     init() {
@@ -238,6 +239,19 @@ class GeoForgeUI {
     _bindGlobeCallbacks() {
         this._globe.onPaintChanged = () => this._updateStats();
         this._globe.onCellHover = (idx, lat, lon) => this._updateTooltip(idx, lat, lon);
+        this._globe.onContiguityError = (msg) => this._flashError(msg);
+    }
+
+    _flashError(msg) {
+        const el = document.getElementById('sb-status');
+        if (!el) return;
+        el.textContent = '⚠ ' + msg;
+        el.style.color = '#ff6644';
+        clearTimeout(this._errorTimer);
+        this._errorTimer = setTimeout(() => {
+            el.style.color = '';
+            el.textContent = 'Ready';
+        }, 3000);
     }
 
     _updateStats() {
@@ -246,7 +260,9 @@ class GeoForgeUI {
 
         this._setStatValue('stat-total',    s.total.toLocaleString());
         this._setStatValue('stat-cont',     `${s.continental.toLocaleString()} (${pct.toFixed(1)}%)`);
-        this._setStatValue('stat-cratons',  s.craton.toLocaleString());
+        this._setStatValue('stat-cratons',  s.craton_regions !== undefined
+            ? `${s.craton_regions} region${s.craton_regions !== 1 ? 's' : ''}`
+            : s.craton.toLocaleString());
         this._setStatValue('stat-rift',     s.rift.toLocaleString());
 
         // Statusbar
