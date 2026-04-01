@@ -103,7 +103,8 @@ class SimRequest(BaseModel):
     continental_cells: List[int] = []
     craton_cells:      List[int] = []
     rift_cells:        List[int] = []
-    time_ma:    float = 500.0
+    time_ma:    float = 100.0
+    #actually 500
     seed:       int   = 42
     co2_ppm:    float = 400.0
     num_plates: int   = 7
