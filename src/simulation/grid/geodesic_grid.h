@@ -65,7 +65,13 @@ public:
     /**Find the cell at the given geographic location.*/
     int LatLonToCell(float lat, float lon) const;
 
-    /**Get geographic coordinates of a cell center.*/
+    /**
+     * Get geographic coordinates of a cell center.
+     *
+     * WARNING: Due to float32 precision, LatLonToCell(CellToLatLon(i)) is NOT
+     * guaranteed to return i if the result is truncated or serialized. Always
+     * store cell indices directly in .geoforge files, never lat/lon derived from them.
+     */
     std::pair<float, float> CellToLatLon(int cell_idx) const;
 
     // --- Accessors for simulation ---

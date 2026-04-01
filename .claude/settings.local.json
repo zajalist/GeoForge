@@ -35,7 +35,8 @@
       "Bash(bash /tmp/create_friday.sh)",
       "Bash(bash /tmp/create_saturday.sh)",
       "Bash(g++ -std=c++17 -O2 -o geodesic_test geodesic_grid.cpp geodesic_grid_test.cpp)",
-      "Bash(./geodesic_test)"
+      "Bash(./geodesic_test)",
+      "Bash(g++ -std=c++17 -O2 -o geodesic_grid_test src/simulation/grid/geodesic_grid.cpp src/simulation/grid/geodesic_grid_test.cpp)"
     ]
   }
 }

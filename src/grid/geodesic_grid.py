@@ -114,6 +114,10 @@ class GeodesicGrid:
 
         Returns:
             (latitude, longitude) in degrees
+
+        WARNING: Due to floating-point precision, latlon_to_cell(cell_to_latlon(i))
+        is NOT guaranteed to return i if the result is truncated or serialized.
+        Always store cell_idx directly in files, never lat/lon derived from it.
         """
         x, y, z = self._vertices[cell_idx]
         return self._xyz_to_latlon(x, y, z)

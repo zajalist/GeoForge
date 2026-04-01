@@ -168,8 +168,8 @@ int GeodesicGrid::FindNearest(float x, float y, float z) const {
     int best_idx = -1;
     float best_dist_sq = std::numeric_limits<float>::max();
 
-    // Probe expanding shells
-    for (int shell = 0; shell <= 2; ++shell) {
+    // Probe expanding shells (up to 4 ensures all cells are found even with rounding)
+    for (int shell = 0; shell <= 4; ++shell) {
         for (int dx = -shell; dx <= shell; ++dx) {
         for (int dy = -shell; dy <= shell; ++dy) {
         for (int dz = -shell; dz <= shell; ++dz) {

@@ -33,11 +33,12 @@ static void TestNeighbourCounts() {
 }
 
 static void TestNeighbourSymmetry() {
-    GeodesicGrid g(4);  // Use level 4 (2562 cells) for speed
-    for (int i = 0; i < g.CellCount(); ++i) {
-        for (int j : g.CellNeighbours(i)) {
+    // Test level 4 for speed
+    GeodesicGrid g4(4);  // 2562 cells
+    for (int i = 0; i < g4.CellCount(); ++i) {
+        for (int j : g4.CellNeighbours(i)) {
             bool found = false;
-            for (int k : g.CellNeighbours(j)) {
+            for (int k : g4.CellNeighbours(j)) {
                 if (k == i) {
                     found = true;
                     break;
@@ -46,6 +47,22 @@ static void TestNeighbourSymmetry() {
             assert(found);
         }
     }
+
+    // Also test level 6 (all 40,962 cells) for correctness assurance
+    GeodesicGrid g6(6);
+    for (int i = 0; i < g6.CellCount(); ++i) {
+        for (int j : g6.CellNeighbours(i)) {
+            bool found = false;
+            for (int k : g6.CellNeighbours(j)) {
+                if (k == i) {
+                    found = true;
+                    break;
+                }
+            }
+            assert(found);
+        }
+    }
+
     printf("PASS TestNeighbourSymmetry\n");
 }
 
