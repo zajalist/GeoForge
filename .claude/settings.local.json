@@ -1,0 +1,33 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(for d:*)",
+      "Read(//d/geoforge/plan/**)",
+      "Bash(done)",
+      "Bash(for f:*)",
+      "Read(//d//**)",
+      "Bash(ls -d \"D:/Unreal\"*)",
+      "Bash(find C:/Users/Admin/.claude/projects/ -maxdepth 2 -type d -iname *sask*)",
+      "WebFetch(domain:api.polyhaven.com)",
+      "Bash(curl -L -O \"https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_mud_leaves_01/brown_mud_leaves_01_diff_2k.jpg\")",
+      "Bash(curl -L -O \"https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_mud_leaves_01/brown_mud_leaves_01_nor_gl_2k.jpg\")",
+      "Bash(curl -L -O \"https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_mud_leaves_01/brown_mud_leaves_01_rough_2k.jpg\")",
+      "Bash(curl -L -O \"https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_mud/brown_mud_diff_2k.jpg\")",
+      "Bash(curl -L -O \"https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_mud/brown_mud_nor_gl_2k.jpg\")",
+      "Bash(curl -L -O \"https://dl.polyhaven.org/file/ph-assets/Textures/jpg/2k/brown_mud/brown_mud_rough_2k.jpg\")",
+      "Bash(cd:*)",
+      "Read(//d/geoforge/**)",
+      "Read(//d/geoforge/plan/$HOME/.claude/**)",
+      "Bash(python -c \"import asyncio, websockets; print\\(''''websockets available''''\\)\")",
+      "Bash(pip install:*)",
+      "Bash(powershell -c \"Test-NetConnection -ComputerName 127.0.0.1 -Port 8090 -WarningAction SilentlyContinue | Select-Object TcpTestSucceeded\" 2>&1)",
+      "Bash(python:*)",
+      "Bash(git:*)",
+      "Bash(grep -E '\\\\.\\(json|yaml|yml|md|txt|config|env|lock\\)$|^package\\\\.json$|^README|^READM|^tsconfig|^webpack|^babel|\\\\.editorconfig|\\\\.gitignore')",
+      "Bash(find /d/geoforge -type f -not -path ./.git/* -not -path ./.claude/*)",
+      "Bash(find /d/geoforge -not -path ./.git/* -not -path ./.claude/* -type d)",
+      "Bash(gh auth:*)",
+      "Bash(gh repo:*)"
+    ]
+  }
+}
