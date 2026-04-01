@@ -197,7 +197,8 @@ def run_simulation(
         _compute_velocities(cells, plates, verts, N)
 
         # --- 2. Detect and handle boundaries ---
-        _handle_boundaries(cells, adj, N, timestep_ma)
+        _handle_boundaries_with_output(cells, adj, N, timestep_ma)
+        # (boundary list discarded in bulk mode)
 
         # --- 3. Update ocean crust age + Parsons & Sclater depth ---
         _update_ocean_crust(cells, timestep_ma)
@@ -262,6 +263,78 @@ def _compute_velocities(cells, plates, verts, N):
         vel_x[idxs] = vx.astype(np.float32)
         vel_y[idxs] = vy.astype(np.float32)
         vel_z[idxs] = vz.astype(np.float32)
+
+
+def _handle_boundaries_with_output(cells, adj, N, dt):
+    """
+    Detect boundary types, apply geological effects, AND return boundary list.
+
+    Returns:
+        List of dicts: [{'type': 'ridge'|'subduction'|'collision'|'transform',
+                         'cell_a': int, 'cell_b': int}, ...]
+    """
+    plate_id  = cells['plate_id']
+    crust     = cells['crust_type']
+    elev      = cells['elevation']
+    orog_type = cells['orogeny_type']
+    orog_age  = cells['orogeny_age']
+    ocean_age = cells['ocean_age']
+    is_craton = cells['is_craton']
+    vx = cells['vel_x'];  vy = cells['vel_y'];  vz = cells['vel_z']
+
+    boundaries = []
+
+    for i in range(N):
+        pid_i = plate_id[i]
+        if pid_i == 0:
+            continue
+        for j in adj[i]:
+            if j <= i:
+                continue
+            pid_j = plate_id[j]
+            if pid_j == 0 or pid_j == pid_i:
+                continue
+
+            rel = np.array([vx[j]-vx[i], vy[j]-vy[i], vz[j]-vz[i]], dtype=np.float64)
+            sep = float(rel[0])  # simplified separation proxy
+
+            if sep > 0.3:
+                # Divergent / ridge
+                if crust[i] != CRUST_CONTINENTAL:
+                    ocean_age[i] = 0; elev[i] = 0.0
+                if crust[j] != CRUST_CONTINENTAL:
+                    ocean_age[j] = 0; elev[j] = 0.0
+                boundaries.append({'type': 'ridge', 'cell_a': int(i), 'cell_b': int(j)})
+
+            elif sep < -0.3:
+                both_cont = (crust[i] == CRUST_CONTINENTAL and
+                             crust[j] == CRUST_CONTINENTAL)
+                if both_cont:
+                    conv = abs(sep)
+                    if conv > 1.5:
+                        otype = OROGENY_HIGH;   h = 4000.0 + conv * 200
+                    elif conv > 0.8:
+                        otype = OROGENY_MEDIUM; h = 2500.0 + conv * 150
+                    else:
+                        otype = OROGENY_LOW;    h = 1200.0 + conv * 100
+                    for cell in (i, j):
+                        if not is_craton[cell]:
+                            elev[cell] = max(elev[cell], h)
+                            orog_type[cell] = otype; orog_age[cell] = 0
+                        else:
+                            elev[cell] = max(elev[cell], h * 0.4)
+                    boundaries.append({'type': 'collision', 'cell_a': int(i), 'cell_b': int(j)})
+                else:
+                    subduct = j if crust[i] == CRUST_CONTINENTAL else i
+                    overrid = i if crust[i] == CRUST_CONTINENTAL else j
+                    elev[subduct] = min(elev[subduct], -6000.0)
+                    elev[overrid] = max(elev[overrid], 2000.0)
+                    orog_type[overrid] = OROGENY_ANDEAN; orog_age[overrid] = 0
+                    boundaries.append({'type': 'subduction', 'cell_a': int(i), 'cell_b': int(j)})
+            else:
+                boundaries.append({'type': 'transform', 'cell_a': int(i), 'cell_b': int(j)})
+
+    return boundaries
 
 
 def _handle_boundaries(cells, adj, N, dt):
@@ -387,6 +460,126 @@ def _apply_erosion(cells, dt):
     cells['elevation'][active] = np.maximum(cells['elevation'][active], 200.0)
     new_age = cells['orogeny_age'][active].astype(np.int32) + int(dt)
     cells['orogeny_age'][active] = np.clip(new_age, 0, 65535).astype(np.uint16)
+
+
+# ============================================================================
+# Wilson Cycle mechanics
+# ============================================================================
+
+def _compute_assembly_index(cells, grid):
+    """
+    Returns (assembly_index, largest_component_cell_list).
+    assembly_index = fraction of continental cells in largest connected cluster (0-1).
+    """
+    adj   = grid._adjacency
+    crust = cells['crust_type']
+    cont  = [i for i in range(grid.cell_count) if crust[i] == CRUST_CONTINENTAL]
+    if not cont:
+        return 0.0, []
+
+    visited = set()
+    best    = []
+    for start in cont:
+        if start in visited:
+            continue
+        component = []
+        queue = [start]
+        visited.add(start)
+        while queue:
+            cur = queue.pop()
+            component.append(cur)
+            for nb in adj[cur]:
+                if nb not in visited and crust[nb] == CRUST_CONTINENTAL:
+                    visited.add(nb)
+                    queue.append(nb)
+        if len(component) > len(best):
+            best = component
+
+    return len(best) / len(cont), best
+
+
+def _find_rift_path(cluster, cells, grid, seed):
+    """
+    Find a belt of cells through the interior of the cluster for a new rift.
+    Returns a list of up to 30 cell indices forming the rift path.
+    """
+    if not cluster:
+        return []
+
+    verts     = grid._vertices
+    adj       = grid._adjacency
+    is_craton = cells['is_craton']
+    cluster_set = set(cluster)
+
+    # Cluster centroid
+    cx = float(np.mean(verts[cluster, 0]))
+    cy = float(np.mean(verts[cluster, 1]))
+    cz = float(np.mean(verts[cluster, 2]))
+    norm = math.sqrt(cx*cx + cy*cy + cz*cz) or 1.0
+    cx /= norm; cy /= norm; cz /= norm
+
+    # Non-craton interior cells sorted by proximity to centroid
+    interior = [c for c in cluster if not is_craton[c]]
+    if not interior:
+        interior = list(cluster)
+
+    interior.sort(key=lambda c: (
+        (verts[c, 0]-cx)**2 + (verts[c, 1]-cy)**2 + (verts[c, 2]-cz)**2))
+    seed_cell = interior[0]
+
+    # BFS walk up to 30 cells, staying in non-craton continental
+    rng = random.Random(seed)
+    visited = {seed_cell}
+    path    = [seed_cell]
+    frontier = [seed_cell]
+    for _ in range(29):
+        candidates = []
+        for c in frontier:
+            for nb in adj[c]:
+                if nb not in visited and nb in cluster_set and not is_craton[nb]:
+                    candidates.append(nb)
+        if not candidates:
+            break
+        next_cell = rng.choice(candidates)
+        visited.add(next_cell)
+        path.append(next_cell)
+        frontier = [next_cell]
+
+    return path
+
+
+def _maybe_trigger_auto_rift(cells, plates, grid, current_time, last_rift_ma, seed):
+    """
+    If supercontinent assembled for >200 Ma, inject a new rift. Returns new last_rift_ma.
+    """
+    assembly, cluster = _compute_assembly_index(cells, grid)
+    if assembly < 0.70:
+        return last_rift_ma  # not yet a supercontinent
+    if current_time - last_rift_ma < 200.0:
+        return last_rift_ma  # still in dwell period
+
+    rift_cells = _find_rift_path(cluster, cells, grid, seed)
+    if not rift_cells:
+        return last_rift_ma
+
+    new_plate_id = max((p['id'] for p in plates), default=0) + 1
+    rng = random.Random(seed)
+    new_euler_lat = rng.uniform(-60, 60)
+    new_euler_lon = rng.uniform(-180, 180)
+
+    for rc in rift_cells:
+        cells['plate_id'][rc] = new_plate_id
+        cells['elevation'][rc] = max(float(cells['elevation'][rc]) - 500.0, -200.0)
+
+    plates.append({
+        'id':         new_plate_id,
+        'euler_lat':  new_euler_lat,
+        'euler_lon':  new_euler_lon,
+        'euler_rate': rng.uniform(2.0, 5.0),
+        'cells':      rift_cells,
+    })
+
+    return current_time
 
 
 # ============================================================================
@@ -583,14 +776,13 @@ def step_once(cells, plates, grid, dt, current_time, last_rift_ma):
     N     = grid.cell_count
 
     _compute_velocities(cells, plates, verts, N)
-    # Use existing _handle_boundaries (returns nothing; boundaries added in Task 3)
-    _handle_boundaries(cells, adj, N, dt)
-    boundaries = []  # Task 3 will populate this
+    boundaries = _handle_boundaries_with_output(cells, adj, N, dt)
     _update_ocean_crust(cells, dt)
     _apply_erosion(cells, dt)
 
-    # Wilson Cycle placeholder (Task 3 will implement this)
-    new_last_rift = last_rift_ma
+    new_last_rift = _maybe_trigger_auto_rift(
+        cells, plates, grid, current_time, last_rift_ma,
+        seed=int(current_time * 13) % (2**31))
 
     return boundaries, new_last_rift
 
