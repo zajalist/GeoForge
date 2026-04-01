@@ -47,7 +47,7 @@ Bite-sized tasks extracted from the hackathon plan. Each item maps to a potentia
 
 ### Yahya — Reader & Web UI
 
-- [ ] **[Yahya]** Implement `GeoForgeFile` Python class (header + channel index + LZ4 decompression)
+- [ ] **[Yahya]** /Implement `GeoForgeFile` Python class (header + channel index + LZ4 decompression)
 - [ ] **[Yahya]** Implement spatial hash query (tile lat/lon -> cell indices)
 - [ ] **[Yahya]** Test reading Badr's `.geoforge` file
 - [ ] **[Yahya]** Implement FastAPI `/tile` endpoint (tile bounds -> 24 channel data)
