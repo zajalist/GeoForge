@@ -1,7 +1,8 @@
 """
 grid_export.py — Export geodesic grid to JSON for Three.js consumption.
 
-Produces src/web/data/grid_level6.json (~2.5 MB, ~800 KB gzipped).
+Produces src/web/data/grid_level{N}.json with vertices, faces, adjacency, and edges.
+For level 6 (~40k cells): ~29 MB JSON, ~8 MB gzipped.
 Cached: only regenerates if the output file is missing.
 
 Usage:
@@ -65,13 +66,12 @@ def export_grid(level: int = 6, output_path: str = None, force: bool = False) ->
     adjacency = grid._adjacency  # list of sorted int lists
 
     # Build unique edge list: [[cell_a, cell_b], ...] where cell_a < cell_b
+    # Edges exported for rift edge tool in Three.js globe UI
     print('Building edge list...')
-    edge_set = set()
     edges_out = []
     for i, neighbors in enumerate(adjacency):
         for j in neighbors:
             if j > i:
-                edge_set.add((i, j))
                 edges_out.append([i, j])
 
     payload = {
