@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **GeoForge** is a science-driven procedural planet generation system. It simulates planetary tectonics from first principles, derives climate and biosphere from physical models, and renders explorable UE5 terrain with physically-motivated vegetation. The full pipeline runs end-to-end in 2-3 minutes per tile.
 
-**Current Status:** 3.5-day hackathon preparation (pre-implementation, planning phase).
+**Current Status:** Geodesic grid complete (Python + C++); simulation, ML biosphere, and UE5 integration pending.
 
 **Team:**
 - **Badr:** Tectonic simulation, climate derivation, ML biosphere profiler, Gaea integration, Substrate materials, PCG vegetation pipeline
@@ -94,13 +94,14 @@ LEVEL REGISTRY (append-only)
 
 ### Geodesic Grid
 
-Foundation for all spatial operations:
+**Implementation:** `src/grid/geodesic_grid.py` (Python reference) + `src/simulation/grid/geodesic_grid.cpp/h` (C++ production). **Must stay in sync.**
 
-- **Subdivision:** Level 6 icosphere → ~65,000 cells
-- **Cell indexing:** 0–65,000
-- **Spatial hash:** lat/lon → cell index O(1) lookup; reverse lookup via cell coordinates
-- **Neighbours:** Each cell has up to 6 neighbours; pre-computed and cached
-- **Critical requirement:** Must be fully tested before simulation code begins (unit tests for count, neighbour consistency, hash round-trip)
+- **Exact cell count:** 40,962 at level 6 (formula: 10×4^L + 2)
+- **Topology:** 12 pentagonal cells (5 neighbours), rest hexagonal (6 neighbours)
+- **Icosahedron vertex ordering:** Lines 128–141 in Python must match lines 44–50 in C++ exactly
+- **Spatial indexing:** Python uses scipy.spatial.cKDTree; C++ uses custom 64³ hash grid over [-1,1]³
+- **Key methods:** `LatLonToCell()` (O(1)), `CellNeighbours()` (pre-computed), `CellToLatLon()` (reverse lookup)
+- **Critical:** Python/C++ must return identical cell indices for same lat/lon inputs
 
 ### ML Biosphere Profiler
 
@@ -243,23 +244,41 @@ UE5 5.7 feature for dense vegetation (10,000+ trees):
 
 ---
 
-## Development Commands (To Be Determined)
+## Development Commands
 
-Once implementation begins, add:
-- Python environment setup (venv + requirements.txt for simulation + FastAPI)
-- C++ build commands (geodesic grid, simulation, .geoforge reader)
-- UE5 plugin build + packaging
-- Web backend startup (FastAPI `uvicorn`)
-- Three.js dev server
-- Test suite execution (geodesic grid unit tests, integration tests)
-- ONNX model export + UE5 inference testing
+**Python (Geodesic Grid & Future Modules):**
+```bash
+python -m venv venv && source venv/bin/activate
+pip install numpy scipy pytest  # Extend for simulation/FastAPI/PyTorch later
+pytest src/grid/test_geodesic_grid.py -v          # Run all grid tests
+pytest src/grid/test_geodesic_grid.py::TestCellCount -v  # Single test
+```
+
+**C++ (Geodesic Grid):**
+```bash
+cd src/simulation/grid
+g++ -std=c++17 -O2 geodesic_grid.cpp geodesic_grid_test.cpp -o grid_test
+./grid_test
+```
+
+**Future (to be added):**
+- C++ simulation build (CMakeLists.txt: tectonic + climate engine)
+- `.geoforge` reader (Python + C++)
+- FastAPI server (`uvicorn`) + Three.js dev server
+- PyTorch model training & ONNX export
+- UE5 plugin build + NNE inference testing
 
 ---
 
 ## Key Files & Locations
 
-(To be created during implementation)
+**Implemented:**
+- `src/grid/geodesic_grid.py` — Python reference implementation (scipy KDTree)
+- `src/grid/test_geodesic_grid.py` — Python unit tests (pytest)
+- `src/simulation/grid/geodesic_grid.cpp/h` — C++ production code (custom spatial hash)
+- `src/simulation/grid/geodesic_grid_test.cpp` — C++ unit tests
 
+**Not Yet Implemented:**
 - `src/simulation/` — C++ tectonic + climate engine
 - `src/ml/` — PyTorch biosphere profiler
 - `src/server/` — FastAPI backend
@@ -267,7 +286,6 @@ Once implementation begins, add:
 - `unreal/GeoForge/` — UE5 5.7 project root
   - `Plugins/GeoForgeRuntime/` — .geoforge reader + tile picker
   - `Plugins/GeoForgePCG/` — PCG pipeline + attribute binding
-- `data/` — WorldClim, GEBCO, MODIS datasets (local, not in repo)
 - `docs/` — Overleaf paper source
 
 ---
