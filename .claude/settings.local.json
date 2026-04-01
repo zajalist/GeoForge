@@ -27,7 +27,15 @@
       "Bash(find /d/geoforge -type f -not -path ./.git/* -not -path ./.claude/*)",
       "Bash(find /d/geoforge -not -path ./.git/* -not -path ./.claude/* -type d)",
       "Bash(gh auth:*)",
-      "Bash(gh repo:*)"
+      "Bash(gh repo:*)",
+      "Bash(gh label:*)",
+      "Bash(cat:*)",
+      "Bash(bash /tmp/create_wednesday.sh)",
+      "Bash(bash /tmp/create_thursday.sh)",
+      "Bash(bash /tmp/create_friday.sh)",
+      "Bash(bash /tmp/create_saturday.sh)",
+      "Bash(g++ -std=c++17 -O2 -o geodesic_test geodesic_grid.cpp geodesic_grid_test.cpp)",
+      "Bash(./geodesic_test)"
     ]
   }
 }
