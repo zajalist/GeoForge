@@ -176,21 +176,33 @@ class GeoForgeUI {
         this._startProgressPoll();
 
         try {
-            const result = await API.simulate({
+            // Fire-and-forget start
+            await API.simulate({
                 continental_cells: this._globe.getPaintedCells('continental'),
                 craton_cells:      this._globe.getPaintedCells('craton'),
                 rift_cells:        this._globe.getPaintedCells('rift'),
+                texture_b64:       this._globe.exportPaintTexture(),
                 time_ma:    timeMa,
                 seed,
                 co2_ppm:    co2,
                 num_plates: numPlates,
             });
 
+            // Poll until done
+            await this._waitForResult();
+
+            // Fetch the actual result data
+            const result = await API.getResult();
+
             this._stopProgressPoll();
             this._globe.applySimResult(result);
             this._setColorMode('elevation');
             this._updateSimStats(result);
-            this._updateStatus(`Simulation complete — ${timeMa} Ma simulated`);
+
+            const pathLabel = result.geoforge_path
+                ? ` — saved to ${result.geoforge_path.split(/[\\/]/).pop()}`
+                : '';
+            this._updateStatus(`Simulation complete — ${timeMa} Ma simulated${pathLabel}`);
 
         } catch (err) {
             this._stopProgressPoll();
@@ -200,6 +212,20 @@ class GeoForgeUI {
             this._running = false;
             this._setSimRunning(false);
         }
+    }
+
+    /** Resolve when /api/status reports has_result=true or error. */
+    async _waitForResult() {
+        return new Promise((resolve, reject) => {
+            const check = async () => {
+                const status = await API.getStatus().catch(() => null);
+                if (!status) { setTimeout(check, 500); return; }
+                if (status.error)      { reject(new Error(status.error)); return; }
+                if (status.has_result) { resolve(); return; }
+                setTimeout(check, 500);
+            };
+            check();
+        });
     }
 
     _setSimRunning(running) {

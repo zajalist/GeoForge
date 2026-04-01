@@ -459,6 +459,52 @@ class GeodesicGlobe {
     isLoaded()        { return this._grid !== null; }
     hasSimResult()    { return this._simResult !== null; }
 
+    /**
+     * Export the current paint state as a base64-encoded equirectangular PNG.
+     * Each cell centre is mapped to a pixel; colour encodes crust type:
+     *   ocean=#1a5a8e  continental=#7a6040  craton=#c8a020  rift=#d04020
+     *
+     * @param {number} width  canvas width in pixels (default 2048)
+     * @param {number} height canvas height in pixels (default 1024)
+     * @returns {string} base64 PNG data (no data-URI prefix)
+     */
+    exportPaintTexture(width = 2048, height = 1024) {
+        if (!this._paintState || !this._grid) return null;
+
+        const canvas = document.createElement('canvas');
+        canvas.width  = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        // Background = ocean
+        ctx.fillStyle = '#1a5a8e';
+        ctx.fillRect(0, 0, width, height);
+
+        const typeColors = ['#1a5a8e', '#7a6040', '#c8a020', '#d04020'];
+        const verts = this._grid.vertices;
+
+        for (let i = 0; i < this._N; i++) {
+            const v   = verts[i];
+            const z   = Math.max(-1, Math.min(1, v[2]));
+            const lat = Math.asin(z) * 180 / Math.PI;
+            const lon = Math.atan2(v[1], v[0]) * 180 / Math.PI;
+
+            const px = Math.round((lon + 180) / 360 * width);
+            const py = Math.round((90 - lat)  / 180 * height);
+
+            ctx.fillStyle = typeColors[this._paintState[i]];
+            // 5×5 patch so cells don't leave gaps at this resolution
+            ctx.fillRect(
+                Math.max(0, px - 2), Math.max(0, py - 2),
+                Math.min(5, width  - Math.max(0, px - 2)),
+                Math.min(5, height - Math.max(0, py - 2)),
+            );
+        }
+
+        // Strip the "data:image/png;base64," prefix
+        return canvas.toDataURL('image/png').split(',')[1];
+    }
+
     // ── Cell picking ─────────────────────────────────────────────────────────
 
     _pickCell(event) {
