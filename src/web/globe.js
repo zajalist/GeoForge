@@ -174,7 +174,9 @@ class GeodesicGlobe {
         this.onPaintChanged = null; // () => void
         this.onContiguityError = null; // (msg: string) => void
 
-        this._errorTimer = null;
+        // Craton region cache (dirty flag + cached count)
+        this._cratonRegionsDirty = true;
+        this._cratonRegionsCache = 0;
 
         this._init();
     }
@@ -381,7 +383,9 @@ class GeodesicGlobe {
             if (d < bestDist) { bestDist = d; bestEdge = { cell_a, cell_b }; }
         }
 
-        return bestDist < 0.04 ? bestEdge : null;
+        const camDist = this._camera ? this._camera.position.length() : 2.5;
+        const threshold = 0.04 * (camDist / 2.5);
+        return bestDist < threshold ? bestEdge : null;
     }
 
     _toggleRiftEdge({ cell_a, cell_b }) {
@@ -472,6 +476,7 @@ class GeodesicGlobe {
     }
 
     _countCratonRegions() {
+        if (!this._cratonRegionsDirty) return this._cratonRegionsCache;
         if (!this._paintState) return 0;
         const visited = new Set();
         let regions = 0;
@@ -491,6 +496,8 @@ class GeodesicGlobe {
                 }
             }
         }
+        this._cratonRegionsCache = regions;
+        this._cratonRegionsDirty = false;
         return regions;
     }
 
@@ -528,6 +535,7 @@ class GeodesicGlobe {
         }
 
         if (changed) {
+            this._cratonRegionsDirty = true;  // may have added/removed craton cells
             this._refreshColors();
             if (this.onPaintChanged) this.onPaintChanged();
         }
@@ -555,6 +563,7 @@ class GeodesicGlobe {
     clearPaint() {
         if (!this._paintState) return;
         this._paintState.fill(0);
+        this._cratonRegionsDirty = true;
         this._refreshColors();
         if (this.onPaintChanged) this.onPaintChanged();
     }
@@ -582,6 +591,10 @@ class GeodesicGlobe {
         const isOrbit = tool === 'orbit';
         this._controls.enabled = isOrbit;
         this._container.classList.toggle('orbit-mode', isOrbit);
+        // Hide rift hover highlight when switching away from rift tool
+        if (tool !== 'rift' && this._hoverLineMesh) {
+            this._hoverLineMesh.visible = false;
+        }
     }
 
     setColorMode(mode) {
