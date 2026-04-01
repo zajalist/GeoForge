@@ -46,7 +46,7 @@ def initialize_cells(
     grid: GeodesicGrid,
     continental_cells: List[int],
     craton_cells: List[int],
-    rift_cells: List[int],
+    rift_edges: List[List[int]],
     num_plates: int,
     seed: int,
 ) -> tuple:
@@ -58,7 +58,13 @@ def initialize_cells(
         orogeny_age, orogeny_type, is_craton
 
     plates_list: list of dicts with euler_lat/lon/rate and cell index lists
+
+    rift_edges: list of [cell_a, cell_b] pairs defining rift lines.
+    Rift cells are derived as all cells that appear in any rift edge.
     """
+    # Derive rift_cells from edges (all cells that touch a rift edge)
+    rift_cells = list({c for edge in rift_edges for c in edge})
+
     rng = random.Random(seed)
     N = grid.cell_count
     verts = grid._vertices  # (N, 3) float64
@@ -536,8 +542,11 @@ def simulate(
     """
     grid = get_grid(grid_level)
 
+    # Old endpoint passes rift_cells directly; convert to edges format
+    # Each cell becomes a self-edge so the derivation inside initialize_cells picks it up
+    rift_edges_compat = [[c, c] for c in rift_cells] if rift_cells else []
     cells, plates = initialize_cells(
-        grid, continental_cells, craton_cells, rift_cells, num_plates, seed)
+        grid, continental_cells, craton_cells, rift_edges_compat, num_plates, seed)
 
     cells = run_simulation(
         grid, cells, plates,
@@ -558,4 +567,46 @@ def simulate(
         'temperature':   climate['temperature'].tolist(),
         'precipitation': climate['precipitation'].tolist(),
         'koppen':        climate['koppen'].tolist(),
+    }
+
+
+# ============================================================================
+# Step-by-step simulation API helpers
+# ============================================================================
+
+def step_once(cells, plates, grid, dt, current_time, last_rift_ma):
+    """
+    Advance simulation by one timestep. Returns (boundaries, new_last_rift_ma).
+    """
+    verts = grid._vertices
+    adj   = grid._adjacency
+    N     = grid.cell_count
+
+    _compute_velocities(cells, plates, verts, N)
+    # Use existing _handle_boundaries (returns nothing; boundaries added in Task 3)
+    _handle_boundaries(cells, adj, N, dt)
+    boundaries = []  # Task 3 will populate this
+    _update_ocean_crust(cells, dt)
+    _apply_erosion(cells, dt)
+
+    # Wilson Cycle placeholder (Task 3 will implement this)
+    new_last_rift = last_rift_ma
+
+    return boundaries, new_last_rift
+
+
+def build_snapshot(cells, grid, co2_ppm, current_time_ma, boundaries):
+    """Build JSON-serialisable snapshot dict for the frontend."""
+    climate = derive_climate(grid, cells, co2_ppm=co2_ppm)
+    return {
+        'current_time_ma': current_time_ma,
+        'cell_count':      grid.cell_count,
+        'elevation':       cells['elevation'].tolist(),
+        'crust_type':      cells['crust_type'].tolist(),
+        'plate_id':        cells['plate_id'].tolist(),
+        'orogeny_type':    cells['orogeny_type'].tolist(),
+        'temperature':     climate['temperature'].tolist(),
+        'precipitation':   climate['precipitation'].tolist(),
+        'koppen':          climate['koppen'].tolist(),
+        'boundaries':      boundaries,
     }

@@ -56,6 +56,19 @@ _sim_state = {
 }
 _sim_lock = threading.Lock()
 
+# Step-by-step session state
+_session: dict = {
+    'active':        False,
+    'cells':         None,
+    'plates':        None,
+    'grid':          None,
+    'current_time':  0.0,
+    'co2_ppm':       400.0,
+    'timestep_ma':   10.0,
+    'last_rift_ma':  0.0,
+}
+_session_lock = threading.Lock()
+
 
 # ============================================================================
 # Grid endpoint
@@ -98,6 +111,21 @@ async def get_grid():
 # ============================================================================
 # Simulation endpoints
 # ============================================================================
+
+class SimInitRequest(BaseModel):
+    continental_cells: List[int] = []
+    craton_cells:      List[int] = []
+    rift_edges:        List[List[int]] = []  # [[cell_a, cell_b], ...]
+    seed:        int   = 42
+    co2_ppm:     float = 400.0
+    num_plates:  int   = 7
+    grid_level:  int   = 7
+    timestep_ma: float = 10.0
+
+
+class SimStepRequest(BaseModel):
+    steps: int = 1
+
 
 class SimRequest(BaseModel):
     continental_cells: List[int] = []
@@ -180,6 +208,77 @@ async def get_status():
 @app.get('/api/health')
 async def health():
     return {'status': 'ok', 'grid_level': _GRID_LEVEL}
+
+
+# ============================================================================
+# Step-by-step simulation endpoints
+# ============================================================================
+
+@app.post('/api/sim/init')
+async def sim_init(req: SimInitRequest):
+    """Initialise a step-by-step simulation session."""
+    grid = sim_runner.get_grid(req.grid_level)
+
+    cells, plates = sim_runner.initialize_cells(
+        grid,
+        continental_cells=req.continental_cells,
+        craton_cells=req.craton_cells,
+        rift_edges=req.rift_edges,
+        num_plates=req.num_plates,
+        seed=req.seed,
+    )
+
+    with _session_lock:
+        _session['active']       = True
+        _session['cells']        = cells
+        _session['plates']       = plates
+        _session['grid']         = grid
+        _session['current_time'] = 0.0
+        _session['co2_ppm']      = req.co2_ppm
+        _session['timestep_ma']  = req.timestep_ma
+        _session['last_rift_ma'] = 0.0
+
+    snapshot = sim_runner.build_snapshot(cells, grid, req.co2_ppm, 0.0, [])
+    return JSONResponse(content=snapshot)
+
+
+@app.post('/api/sim/step')
+async def sim_step(req: SimStepRequest):
+    """Advance simulation by N timesteps."""
+    with _session_lock:
+        if not _session['active']:
+            raise HTTPException(status_code=400, detail='No active session. Call /api/sim/init first.')
+        cells      = _session['cells']
+        plates     = _session['plates']
+        grid       = _session['grid']
+        co2_ppm    = _session['co2_ppm']
+        dt         = _session['timestep_ma']
+        t          = _session['current_time']
+        last_rift  = _session['last_rift_ma']
+
+    boundaries = []
+    for _ in range(req.steps):
+        boundaries, last_rift = sim_runner.step_once(
+            cells, plates, grid, dt, t, last_rift)
+        t += dt
+
+    with _session_lock:
+        _session['current_time'] = t
+        _session['last_rift_ma'] = last_rift
+
+    snapshot = sim_runner.build_snapshot(cells, grid, co2_ppm, t, boundaries)
+    return JSONResponse(content=snapshot)
+
+
+@app.post('/api/sim/reset')
+async def sim_reset():
+    """Clear the active session."""
+    with _session_lock:
+        _session['active'] = False
+        _session['cells']  = None
+        _session['plates'] = None
+        _session['grid']   = None
+    return {'ok': True}
 
 
 # ============================================================================

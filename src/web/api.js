@@ -59,4 +59,50 @@ const API = {
         if (!res.ok) return null;
         return res.json();
     },
+
+    /**
+     * Initialise a step-by-step simulation session.
+     *
+     * @param {object} params
+     *   continental_cells  int[]        cell indices painted continental
+     *   craton_cells       int[]        cell indices marked as cratons
+     *   rift_edges         int[][]      pairs [[cell_a, cell_b], ...] forming rift lines
+     *   seed               int          RNG seed
+     *   co2_ppm            float        atmospheric CO2 (ppm)
+     *   num_plates         int          number of tectonic plates
+     *   grid_level         int          geodesic grid subdivision level
+     *   timestep_ma        float        Ma per step
+     *
+     * @returns Promise<Snapshot>  initial state at t=0
+     */
+    async simInit(params) {
+        const r = await fetch('/api/sim/init', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(params),
+        });
+        if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+        return r.json();
+    },
+
+    /**
+     * Advance the active session by N timesteps.
+     *
+     * @param {number} steps  number of timesteps to advance (default 1)
+     * @returns Promise<Snapshot>  state after advancing
+     */
+    async simStep(steps = 1) {
+        const r = await fetch('/api/sim/step', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ steps }),
+        });
+        if (!r.ok) throw new Error((await r.json()).detail || r.statusText);
+        return r.json();
+    },
+
+    /** Clear the active step-by-step session. */
+    async simReset() {
+        await fetch('/api/sim/reset', { method: 'POST' });
+    },
 };
