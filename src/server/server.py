@@ -41,7 +41,7 @@ app = FastAPI(title='GeoForge API', version='1.0')
 
 _WEB_DIR  = _SCRIPT_DIR / '..' / 'web'
 _DATA_DIR = _WEB_DIR / 'data'
-_GRID_LEVEL = 6
+_GRID_LEVEL = 7
 
 # ============================================================================
 # Simulation state (one sim at a time)

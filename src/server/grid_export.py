@@ -64,12 +64,23 @@ def export_grid(level: int = 6, output_path: str = None, force: bool = False) ->
     # --- Adjacency: per-cell neighbour indices (sorted ascending) ---
     adjacency = grid._adjacency  # list of sorted int lists
 
+    # Build unique edge list: [[cell_a, cell_b], ...] where cell_a < cell_b
+    print('Building edge list...')
+    edge_set = set()
+    edges_out = []
+    for i, neighbors in enumerate(adjacency):
+        for j in neighbors:
+            if j > i:
+                edge_set.add((i, j))
+                edges_out.append([i, j])
+
     payload = {
         'cell_count': grid.cell_count,
         'level': level,
         'vertices': verts,
         'faces': faces,
         'adjacency': adjacency,
+        'edges': edges_out,
     }
 
     print(f'Writing {output_path}...')
