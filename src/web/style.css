@@ -304,3 +304,14 @@ body {
     max-width: 180px;
 }
 #tooltip.visible { display: block; }
+
+/* Timeline controls */
+.timeline-controls {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 6px;
+}
+#timeline-slider {
+    accent-color: #5588aa;
+    cursor: pointer;
+}
