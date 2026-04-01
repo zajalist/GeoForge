@@ -17,7 +17,7 @@ import os
 import math
 import random
 import numpy as np
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 
 _SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_SCRIPT_DIR, '..', 'grid'))
@@ -108,7 +108,7 @@ def initialize_cells(
 
     # --- Rift cells: split into new plate at t=0 ---
     if rift_cells:
-        rift_plate_id = num_plates + 1
+        rift_plate_id = min(num_plates + 1, 255)
         for rc in rift_cells:
             plate_id_arr[rc] = rift_plate_id
 
@@ -197,7 +197,7 @@ def run_simulation(
         _compute_velocities(cells, plates, verts, N)
 
         # --- 2. Detect and handle boundaries ---
-        _handle_boundaries_with_output(cells, adj, N, timestep_ma)
+        _handle_boundaries_with_output(cells, adj, N, timestep_ma, verts)
         # (boundary list discarded in bulk mode)
 
         # --- 3. Update ocean crust age + Parsons & Sclater depth ---
@@ -265,7 +265,7 @@ def _compute_velocities(cells, plates, verts, N):
         vel_z[idxs] = vz.astype(np.float32)
 
 
-def _handle_boundaries_with_output(cells, adj, N, dt):
+def _handle_boundaries_with_output(cells, adj, N, dt, verts):
     """
     Detect boundary types, apply geological effects, AND return boundary list.
 
@@ -296,7 +296,8 @@ def _handle_boundaries_with_output(cells, adj, N, dt):
                 continue
 
             rel = np.array([vx[j]-vx[i], vy[j]-vy[i], vz[j]-vz[i]], dtype=np.float64)
-            sep = float(rel[0])  # simplified separation proxy
+            sep_vec = np.array([verts[j, 0]-verts[i, 0], verts[j, 1]-verts[i, 1], verts[j, 2]-verts[i, 2]], dtype=np.float64)
+            sep = float(np.dot(rel, sep_vec))  # divergence along cell separation axis
 
             if sep > 0.3:
                 # Divergent / ridge
@@ -616,15 +617,15 @@ def _compute_coastal_influence(crust, adj, N, max_hops=15):
 # Top-level entry point called by server.py
 # ============================================================================
 
-_grid_cache: Optional[GeodesicGrid] = None
+_grid_cache: dict = {}
 
 
-def get_grid(level: int = 6) -> GeodesicGrid:
-    """Return cached GeodesicGrid (singleton per level)."""
+def get_grid(level: int = 7) -> GeodesicGrid:
+    """Return cached GeodesicGrid (keyed by level; 7 = 163,842 cells for production)."""
     global _grid_cache
-    if _grid_cache is None or _grid_cache.cell_count != 10 * (4 ** level) + 2:
-        _grid_cache = GeodesicGrid(level=level)
-    return _grid_cache
+    if level not in _grid_cache:
+        _grid_cache[level] = GeodesicGrid(level=level)
+    return _grid_cache[level]
 
 
 def simulate(
@@ -647,8 +648,9 @@ def simulate(
     """
     grid = get_grid(grid_level)
 
-    # Old endpoint passes rift_cells directly; convert to edges format
-    # Each cell becomes a self-edge so the derivation inside initialize_cells picks it up
+    # Legacy endpoint passes flat cell list; convert to edge format used by initialize_cells.
+    # Self-edges [c, c] are intentional: inside initialize_cells, rift cells are extracted
+    # as {c for edge in rift_edges for c in edge}, so [c, c] correctly yields {c}.
     rift_edges_compat = [[c, c] for c in rift_cells] if rift_cells else []
     cells, plates = initialize_cells(
         grid, continental_cells, craton_cells, rift_edges_compat, num_plates, seed)
@@ -688,7 +690,7 @@ def step_once(cells, plates, grid, dt, current_time, last_rift_ma):
     N     = grid.cell_count
 
     _compute_velocities(cells, plates, verts, N)
-    boundaries = _handle_boundaries_with_output(cells, adj, N, dt)
+    boundaries = _handle_boundaries_with_output(cells, adj, N, dt, verts)
     _update_ocean_crust(cells, dt)
     _apply_erosion(cells, dt)
 

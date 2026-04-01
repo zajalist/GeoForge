@@ -59,6 +59,7 @@ _sim_lock = threading.Lock()
 # Step-by-step session state
 _session: dict = {
     'active':        False,
+    'stepping':      False,  # True while a /api/sim/step call is executing
     'cells':         None,
     'plates':        None,
     'grid':          None,
@@ -83,7 +84,7 @@ async def get_grid():
     # Generate on first request if missing
     if not gz_path.exists():
         _DATA_DIR.mkdir(parents=True, exist_ok=True)
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
             lambda: grid_export.export_grid(level=_GRID_LEVEL)
@@ -230,6 +231,7 @@ async def sim_init(req: SimInitRequest):
 
     with _session_lock:
         _session['active']       = True
+        _session['stepping']     = False
         _session['cells']        = cells
         _session['plates']       = plates
         _session['grid']         = grid
@@ -248,6 +250,9 @@ async def sim_step(req: SimStepRequest):
     with _session_lock:
         if not _session['active']:
             raise HTTPException(status_code=400, detail='No active session. Call /api/sim/init first.')
+        if _session['stepping']:
+            raise HTTPException(status_code=409, detail='Step already in progress.')
+        _session['stepping'] = True
         cells      = _session['cells']
         plates     = _session['plates']
         grid       = _session['grid']
@@ -256,15 +261,17 @@ async def sim_step(req: SimStepRequest):
         t          = _session['current_time']
         last_rift  = _session['last_rift_ma']
 
-    boundaries = []
-    for _ in range(req.steps):
-        boundaries, last_rift = sim_runner.step_once(
-            cells, plates, grid, dt, t, last_rift)
-        t += dt
-
-    with _session_lock:
-        _session['current_time'] = t
-        _session['last_rift_ma'] = last_rift
+    try:
+        boundaries = []
+        for _ in range(req.steps):
+            boundaries, last_rift = sim_runner.step_once(
+                cells, plates, grid, dt, t, last_rift)
+            t += dt
+    finally:
+        with _session_lock:
+            _session['current_time'] = t
+            _session['last_rift_ma'] = last_rift
+            _session['stepping'] = False
 
     snapshot = sim_runner.build_snapshot(cells, grid, co2_ppm, t, boundaries)
     return JSONResponse(content=snapshot)
@@ -291,7 +298,7 @@ async def startup():
     gz_path = _DATA_DIR / f'grid_level{_GRID_LEVEL}.json.gz'
     if not gz_path.exists():
         print(f'Pre-generating grid JSON (level {_GRID_LEVEL})...')
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         await loop.run_in_executor(
             None,
             lambda: grid_export.export_grid(level=_GRID_LEVEL)

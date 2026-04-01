@@ -2,11 +2,11 @@
 grid_export.py — Export geodesic grid to JSON for Three.js consumption.
 
 Produces src/web/data/grid_level{N}.json with vertices, faces, adjacency, and edges.
-For level 6 (~40k cells): ~29 MB JSON, ~8 MB gzipped.
+For level 7 (~163k cells): ~110 MB JSON, ~29 MB gzipped.
 Cached: only regenerates if the output file is missing.
 
 Usage:
-    python grid_export.py              # level 6 (default)
+    python grid_export.py              # level 7 (default)
     python grid_export.py --level 4   # smaller grid for dev/testing
 """
 
@@ -25,12 +25,12 @@ sys.path.insert(0, _GRID_DIR)
 from geodesic_grid import GeodesicGrid
 
 
-def export_grid(level: int = 6, output_path: str = None, force: bool = False) -> str:
+def export_grid(level: int = 7, output_path: str = None, force: bool = False) -> str:
     """
     Build and export the geodesic grid to JSON.
 
     Args:
-        level: Subdivision level (default 6 → 40,962 cells)
+        level: Subdivision level (default 7 → 163,842 cells)
         output_path: Where to write the JSON. Defaults to
                      src/web/data/grid_level{level}.json
         force: Regenerate even if output already exists

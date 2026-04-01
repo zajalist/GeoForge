@@ -746,9 +746,7 @@ class GeodesicGlobe {
             if (this.onCellHover) {
                 const v = this._grid.vertices[cellIdx];
                 const z = Math.max(-1, Math.min(1, v[2]));
-                const lat = Math.degrees
-                    ? Math.degrees(Math.asin(z))
-                    : Math.asin(z) * (180 / Math.PI);
+                const lat = Math.asin(z) * (180 / Math.PI);
                 const lon = Math.atan2(v[1], v[0]) * (180 / Math.PI);
                 this.onCellHover(cellIdx, lat, lon);
             }

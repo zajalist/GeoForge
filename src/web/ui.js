@@ -81,13 +81,6 @@ class GeoForgeUI {
             });
         });
 
-        // Reset view button
-        document.getElementById('btn-reset-view')?.addEventListener('click', () => {
-            this._globe._camera.position.set(0, 0, 2.8);
-            this._globe._controls.target.set(0, 0, 0);
-            this._globe._controls.update();
-        });
-
         document.getElementById('btn-boundaries')?.addEventListener('click', () => {
             const btn = document.getElementById('btn-boundaries');
             const on  = !btn.classList.contains('active');
@@ -355,10 +348,10 @@ class GeoForgeUI {
             b.textContent = pct.toFixed(1) + '%';
         });
         document.getElementById('sb-cratons')?.querySelectorAll('b').forEach(b => {
-            b.textContent = s.craton;
+            b.textContent = s.craton_regions !== undefined ? s.craton_regions : s.craton;
         });
         document.getElementById('sb-rift')?.querySelectorAll('b').forEach(b => {
-            b.textContent = s.rift + ' cells';
+            b.textContent = s.rift + ' edges';
         });
     }
 
