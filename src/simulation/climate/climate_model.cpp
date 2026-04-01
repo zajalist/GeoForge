@@ -41,9 +41,14 @@ std::vector<ClimateCell> ClimateModel::Derive(
         // Clamp precipitation to realistic range
         P = std::max(0.0f, std::min(P, 5000.0f));
 
+        // Effective latitude for Köppen: 1 km elev = 8° poleward shift
+        float elev_km_pos = std::max(0.0f, elev / 1000.0f);
+        float eff_lat = std::copysign(
+            std::min(90.0f, std::abs(lat) + elev_km_pos * 8.0f), lat);
+
         climate[i].temperature   = T;
         climate[i].precipitation = P;
-        climate[i].koppen        = KoppenClass(T, P, lat);
+        climate[i].koppen        = KoppenClass(T, P, eff_lat);
     }
 
     return climate;
@@ -59,9 +64,9 @@ float ClimateModel::SolarTemperature(float lat_deg) {
 }
 
 float ClimateModel::LapseCorrection(float elevation_m) {
-    // Environmental lapse rate: -6.5°C per km above sea level
+    // Environmental lapse rate: 4.46°C/km (Worldbuilding Pasta calibration)
     float elev_km = std::max(0.0f, elevation_m / 1000.0f);
-    return -6.5f * elev_km;
+    return -4.46f * elev_km;
 }
 
 float ClimateModel::GreenhouseOffset(float co2_ppm) {
@@ -91,10 +96,14 @@ float ClimateModel::BaseRainfall(float lat_deg) {
 }
 
 float ClimateModel::OrographicFactor(float elevation_m) {
-    if (elevation_m < 0.0f) return 1.0f; // Ocean surface: no orographic effect
-    if (elevation_m > 2000.0f) return 1.6f; // Windward high-altitude boost
-    if (elevation_m > 1000.0f) return 1.2f;
-    return 1.0f;
+    // Worldbuilding Pasta: precipitation peaks at 1.0-1.5 km windward;
+    // diminishes above 4 km (rainshadow / too cold for condensation).
+    if (elevation_m < 0.0f)    return 1.0f;
+    float elev_km = elevation_m / 1000.0f;
+    if (elev_km < 1.0f) return 1.0f + elev_km * 0.4f;         // rising, up to 1.4×
+    if (elev_km < 2.0f) return 1.4f - (elev_km - 1.0f) * 0.2f; // peak then slight drop
+    if (elev_km < 4.0f) return 1.2f - (elev_km - 2.0f) * 0.3f; // continued drop
+    return 0.6f;                                                // >4 km: rainshadow
 }
 
 float ClimateModel::CoastalFactor(bool is_coastal) {
@@ -112,7 +121,9 @@ bool ClimateModel::IsCoastal(int cell_idx,
 
 uint8_t ClimateModel::KoppenClass(float T_mean, float P_annual, float lat_deg) {
     // Simplified Trewartha/Köppen approximation
-    // Estimate coldest month temperature from mean and seasonality
+    // Mountain migration: 1 km elevation ≈ 8° poleward (Worldbuilding Pasta).
+    // lat_deg here is GEOGRAPHIC latitude; the caller may pass effective latitude
+    // (|lat| + elev_km*8) for proper high-altitude climate zones.
     float seasonality = 15.0f * std::cos(lat_deg * kDeg2Rad);
     float T_min = T_mean - seasonality;
     float T_max = T_mean + seasonality;

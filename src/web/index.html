@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GeoForge — Tectonic Painter</title>
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Three.js r128 + OrbitControls via CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    // OrbitControls are not in the minified bundle; load from unpkg
+    // If offline: copy OrbitControls.js locally
+  </script>
+  <script src="https://unpkg.com/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+<!-- ── Top bar ───────────────────────────────────────────────────────── -->
+<div id="topbar">
+  <h1>GeoForge</h1>
+  <span style="color:#456;font-size:11px">Tectonic Painter</span>
+
+  <div class="toolbar-sep"></div>
+
+  <!-- Paint tools -->
+  <button class="tool-btn" id="btn-ocean">
+    <span class="icon">🌊</span> Ocean <span class="key">O</span>
+  </button>
+  <button class="tool-btn active" id="btn-continental">
+    <span class="icon">🏔</span> Continental <span class="key">C</span>
+  </button>
+  <button class="tool-btn" id="btn-craton">
+    <span class="icon">💎</span> Craton <span class="key">K</span>
+  </button>
+  <button class="tool-btn" id="btn-rift">
+    <span class="icon">⚡</span> Rift <span class="key">R</span>
+  </button>
+
+  <div class="toolbar-sep"></div>
+
+  <button class="tool-btn" id="btn-orbit">
+    <span class="icon">🔄</span> Orbit <span class="key">Space</span>
+  </button>
+
+  <div class="toolbar-sep"></div>
+
+  <!-- Brush size -->
+  <button class="tool-btn" id="btn-brush-dec" title="Decrease brush [ ">−</button>
+  <span id="brush-size-label" style="color:#888;font-size:11px;padding:0 4px">Brush: 1 ring</span>
+  <button class="tool-btn" id="btn-brush-inc" title="Increase brush ]">+</button>
+
+  <div class="toolbar-sep"></div>
+
+  <button class="tool-btn" id="btn-wire" title="Toggle wireframe (G)">
+    <span class="icon">⬡</span> Grid <span class="key">G</span>
+  </button>
+  <button class="tool-btn danger" id="btn-clear">🗑 Clear</button>
+</div>
+
+
+<!-- ── Main area ──────────────────────────────────────────────────────── -->
+<div id="main">
+
+  <!-- Globe viewport -->
+  <div id="globe-container">
+    <div id="loading-overlay">
+      <div class="spinner"></div>
+      <div id="loading-text">Loading geodesic grid…</div>
+    </div>
+  </div>
+
+  <!-- Right sidebar -->
+  <div id="sidebar">
+
+    <!-- Display mode -->
+    <div class="sidebar-section">
+      <h2>Display</h2>
+      <div class="mode-tabs">
+        <div class="mode-tab active" data-mode="crust"         title="1">Crust</div>
+        <div class="mode-tab"        data-mode="elevation"     title="2">Elevation</div>
+        <div class="mode-tab"        data-mode="temperature"   title="3">Temp</div>
+        <div class="mode-tab"        data-mode="precipitation" title="4">Rain</div>
+        <div class="mode-tab"        data-mode="koppen"        title="5">Köppen</div>
+        <div class="mode-tab"        data-mode="plates"        title="6">Plates</div>
+      </div>
+      <div class="legend" id="legend" style="margin-top:8px">
+        <div class="legend-item"><div class="legend-swatch" style="background:#1a5a8e"></div><span>Ocean</span></div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#7a6040"></div><span>Continental</span></div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#c8a020"></div><span>Craton</span></div>
+        <div class="legend-item"><div class="legend-swatch" style="background:#d04020"></div><span>Rift</span></div>
+      </div>
+    </div>
+
+    <!-- Simulation parameters -->
+    <div class="sidebar-section">
+      <h2>Simulation</h2>
+      <div class="param-row">
+        <label>Duration (Ma)</label>
+        <input type="number" id="param-time" value="500" min="50" max="2000" step="50">
+      </div>
+      <div class="param-row">
+        <label>Num plates</label>
+        <input type="number" id="param-plates" value="7" min="3" max="15">
+      </div>
+      <div class="param-row">
+        <label>CO₂ (ppm)</label>
+        <input type="number" id="param-co2" value="400" min="100" max="4000">
+      </div>
+      <div class="param-row">
+        <label>Seed</label>
+        <input type="number" id="param-seed" value="42">
+      </div>
+
+      <button class="btn" id="btn-simulate">▶ Run Simulation</button>
+      <button class="btn" id="btn-reset-view" style="margin-top:2px">⌖ Reset View</button>
+
+      <!-- Progress -->
+      <div id="sim-progress-wrap">
+        <div class="progress-bar">
+          <div class="progress-fill" id="progress-fill"></div>
+        </div>
+        <div class="progress-text" id="progress-text">0 / 500 Ma</div>
+      </div>
+    </div>
+
+    <!-- Paint stats -->
+    <div class="sidebar-section">
+      <h2>Selection</h2>
+      <div class="stat-row">
+        <span class="stat-label">Total cells</span>
+        <span class="stat-value accent" id="stat-total">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Continental</span>
+        <span class="stat-value" id="stat-cont">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Cratons</span>
+        <span class="stat-value" id="stat-cratons">0</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Rift cells</span>
+        <span class="stat-value" id="stat-rift">0</span>
+      </div>
+    </div>
+
+    <!-- Simulation result stats (shown after sim) -->
+    <div class="sidebar-section" id="sim-stats-section" style="display:none">
+      <h2>Results</h2>
+      <div class="stat-row">
+        <span class="stat-label">Elevation range</span>
+        <span class="stat-value" id="stat-elev-range">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Mean elevation</span>
+        <span class="stat-value" id="stat-elev-mean">—</span>
+      </div>
+      <div class="stat-row">
+        <span class="stat-label">Temperature</span>
+        <span class="stat-value" id="stat-temp-range">—</span>
+      </div>
+    </div>
+
+    <!-- Keyboard shortcuts -->
+    <div class="sidebar-section">
+      <h2>Shortcuts</h2>
+      <div style="color:#666;font-size:11px;line-height:1.8">
+        <b style="color:#888">O/C/K/R</b> — paint tools<br>
+        <b style="color:#888">Space</b> — orbit mode<br>
+        <b style="color:#888">[ ]</b> — brush size<br>
+        <b style="color:#888">G</b> — toggle grid<br>
+        <b style="color:#888">1–6</b> — display mode
+      </div>
+    </div>
+
+  </div><!-- /sidebar -->
+</div><!-- /main -->
+
+
+<!-- ── Status bar ────────────────────────────────────────────────────── -->
+<div id="statusbar">
+  <span id="sb-status">Loading…</span>
+  <span>|</span>
+  <span id="sb-cont">Continental: <b>0%</b></span>
+  <span>|</span>
+  <span id="sb-cratons">Cratons: <b>0</b></span>
+  <span>|</span>
+  <span id="sb-rift">Rift: <b>0 cells</b></span>
+</div>
+
+<!-- Tooltip (floats with mouse) -->
+<div id="tooltip"></div>
+
+
+<!-- ── Scripts ───────────────────────────────────────────────────────── -->
+<script src="api.js"></script>
+<script src="globe.js"></script>
+<script src="ui.js"></script>
+
+<script>
+(async () => {
+    const container = document.getElementById('globe-container');
+    const loadingEl = document.getElementById('loading-overlay');
+    const loadText  = document.getElementById('loading-text');
+    const simStats  = document.getElementById('sim-stats-section');
+
+    // Create globe
+    const globe = new GeodesicGlobe(container);
+    const ui    = new GeoForgeUI(globe);
+
+    try {
+        loadText.textContent = 'Building geodesic grid (first run may take 30s)…';
+        await globe.loadGrid();
+
+        loadingEl.classList.add('hidden');
+        setTimeout(() => loadingEl.remove(), 500);
+
+        ui.init();
+
+        // Show result stats section after sim
+        const origApply = globe.applySimResult.bind(globe);
+        globe.applySimResult = (result) => {
+            origApply(result);
+            if (simStats) simStats.style.display = 'block';
+        };
+
+        document.getElementById('sb-status').textContent =
+            `Ready — ${globe._N.toLocaleString()} cells loaded`;
+
+    } catch (err) {
+        loadText.textContent = `Failed to load grid: ${err.message}`;
+        loadText.style.color = '#e87f7f';
+        console.error(err);
+    }
+})();
+</script>
+
+</body>
+</html>

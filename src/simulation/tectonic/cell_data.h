@@ -19,6 +19,7 @@ struct CellState {
     uint16_t orogeny_age  = 0;    // Ma since last orogeny
     uint8_t  orogeny_type = 0;    // 0=none 1=HIGH 2=MEDIUM 3=LOW 4=ANDEAN
     bool     is_ridge     = false; // newly formed oceanic crust this step
+    bool     is_craton    = false; // ancient stable continental core — resists erosion and rifting
 };
 
 static constexpr uint8_t CRUST_OCEANIC      = 0;
