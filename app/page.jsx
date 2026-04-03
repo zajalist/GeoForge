@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { GlobeVisualization } from '../src/visualization/GlobeVisualization.js'
 import { generateRiftPath } from '../src/simulation/riftPathfinder.js'
+import { generatePlanet, renderPlanetToCanvas, WIDTH, HEIGHT } from '../src/simulation/planetGenerator.js'
 
 function getCurrentPhase(time) {
   if (time < 50) return 'Embryonic Rifting'
@@ -711,6 +712,19 @@ ${featureBlocks.join('\n')}
     setInteraction('navigate')
     if (globeRef.current) {
       globeRef.current.resetView()
+      globeRef.current.clearHeuristicMarker()
+    }
+
+    // Clear planet canvas
+    const planetCanvas = document.getElementById('planet-canvas')
+    if (planetCanvas) {
+      const ctx = planetCanvas.getContext('2d')
+      ctx.clearRect(0, 0, planetCanvas.width, planetCanvas.height)
+      
+      // Reset globe material to default
+      if (globeRef.current) {
+        globeRef.current.resetGlobeMaterial()
+      }
     }
 
     resetSceneData()
@@ -945,23 +959,41 @@ ${featureBlocks.join('\n')}
   }
 
   const onPlay = () => {
-    if (!isSetupCompleteRef.current) {
-      setStatusText('Finish setup before playing the simulation.')
-      return
-    }
-
-    // Calculate and display heuristic candidate
-    const candidate = calculateHeuristicCandidate()
-    if (candidate && globeRef.current) {
-      globeRef.current.drawHeuristicCandidate(candidate.lat, candidate.lon, 0xff0000)
-      setStatusText(`Heuristic rift candidate identified at (${candidate.lat.toFixed(1)}°, ${candidate.lon.toFixed(1)}°)`)
-    } else {
-      setStatusText('Could not calculate heuristic candidate. Check continent geometry.')
-    }
-
-    isPlayingRef.current = false
-    setIsPlaying(false)
+  if (!isSetupCompleteRef.current) {
+    setStatusText('Finish setup before playing the simulation.')
+    return
   }
+
+  // Calculate and display heuristic candidate
+  const candidate = calculateHeuristicCandidate()
+  if (candidate && globeRef.current) {
+    globeRef.current.drawHeuristicCandidate(candidate.lat, candidate.lon, 0xff0000)
+    setStatusText(`Heuristic rift candidate identified at (${candidate.lat.toFixed(1)}°, ${candidate.lon.toFixed(1)}°)`)
+  }
+
+  // Only generate planet on client-side (use fixed seed to avoid mismatch)
+  if (typeof window !== 'undefined') {
+    const planetCanvas = document.getElementById('planet-canvas')
+    if (planetCanvas) {
+      planetCanvas.width = WIDTH
+      planetCanvas.height = HEIGHT
+      // Use a fixed seed based on continent data, not Date.now()
+      const seed = (supercontinentPolygonRef.current?.lats?.length || 1) * 12345
+      const lats = supercontinentPolygonRef.current?.lats || []
+      const lons = supercontinentPolygonRef.current?.lons || []
+      generatePlanet(seed, lats, lons)
+      renderPlanetToCanvas(planetCanvas)
+      
+      // Apply the generated texture to the 3D globe
+      if (globeRef.current) {
+        globeRef.current.applyCelestialTexture(planetCanvas)
+      }
+    }
+  }
+
+  isPlayingRef.current = false
+  setIsPlaying(false)
+}
 
   const onPause = () => {
     isPlayingRef.current = false
@@ -971,6 +1003,18 @@ ${featureBlocks.join('\n')}
   return (
     <div className='app-shell'>
       <canvas ref={canvasRef} id='canvas' />
+      <canvas 
+  id='planet-canvas' 
+  style={{
+    position: 'absolute',
+    bottom: '20px',
+    right: '20px',
+    border: '2px solid #00ff00',
+    width: '256px',
+    height: '128px',
+    zIndex: 100
+  }}
+/>
 
       {!isLoaded && <div className='loading-overlay'>Loading manual workspace...</div>}
 

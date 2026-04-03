@@ -69,6 +69,7 @@ export class GlobeVisualization {
     this.boundaryLines = []
     this.plumeMarkers = []
     this.craton_markers = []
+    this.heuristicMarker = null
 
     // Mouse drag navigation.
     this.canvas.style.cursor = 'grab'
@@ -209,6 +210,25 @@ export class GlobeVisualization {
     const wasDragged = this.didDrag
     this.didDrag = false
     return wasDragged
+  }
+
+  /**
+   * Apply a canvas texture to the globe
+   */
+  applyCelestialTexture(canvas) {
+    const texture = new THREE.CanvasTexture(canvas)
+    texture.magFilter = THREE.LinearFilter
+    texture.minFilter = THREE.LinearMipmapLinearFilter
+
+    // Create new material with the texture
+    const material = new THREE.MeshPhongMaterial({
+      map: texture,
+      shininess: 5
+    })
+
+    // Replace globe material and hide tectonic overlays so the texture is unobstructed
+    this.globe.material = material
+    this.tectonicsGroup.visible = false
   }
   
   onWindowResize() {
@@ -662,6 +682,9 @@ export class GlobeVisualization {
    * Draw heuristic candidate marker (red dot overlay)
    */
   drawHeuristicCandidate(lat, lon, color = 0xff0000) {
+    // Clear any existing marker
+    this.clearHeuristicMarker()
+    
     const pos = this.latLonToXYZ(lat, lon).multiplyScalar(this.surfaceRadius + 0.005)
     const geometry = new THREE.SphereGeometry(0.008, 12, 12)
     const material = new THREE.MeshBasicMaterial({ 
@@ -674,6 +697,29 @@ export class GlobeVisualization {
     marker.position.copy(pos)
     marker.renderOrder = 100
     this.scene.add(marker)
+    this.heuristicMarker = marker
+  }
+  
+  /**
+   * Reset globe material to default
+   */
+  resetGlobeMaterial() {
+    const defaultMaterial = new THREE.MeshPhongMaterial({
+      color: 0x2a4a7c,
+      shininess: 5
+    })
+    this.globe.material = defaultMaterial
+    this.tectonicsGroup.visible = true
+  }
+
+  /**
+   * Clear the heuristic candidate marker
+   */
+  clearHeuristicMarker() {
+    if (this.heuristicMarker) {
+      this.scene.remove(this.heuristicMarker)
+      this.heuristicMarker = null
+    }
   }
   
   /**
