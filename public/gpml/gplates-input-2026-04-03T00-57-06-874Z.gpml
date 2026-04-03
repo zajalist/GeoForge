@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpml:FeatureCollection
+  xmlns:gpml="http://www.gplates.org/gplates"
+  xmlns:gml="http://www.opengis.net/gml"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.gplates.org/gplates gpml.xsd">
+  <gpml:metadata>
+    <gpml:creator>GeoForge manual export</gpml:creator>
+    <gpml:created>2026-04-03T00:57:06.874Z</gpml:created>
+  </gpml:metadata>
+
+    <gpml:featureMember>
+      <gpml:UnclassifiedFeature gml:id="feature-supercontinent-1">
+        <gpml:name>Supercontinent</gpml:name>
+        <gpml:description>supercontinent-outline</gpml:description>
+        <gpml:reconstructionPlateId>0</gpml:reconstructionPlateId>
+        <gpml:validTime>
+          <gpml:TimePeriod>
+            <gpml:begin>0.0</gpml:begin>
+            <gpml:end>1000.0</gpml:end>
+          </gpml:TimePeriod>
+        </gpml:validTime>
+        <gpml:geometry>
+          <gml:Polygon srsName="urn:ogc:def:crs:EPSG::4326">
+            <gml:exterior>
+              <gml:LinearRing>
+                <gml:posList>107.572623 32.198916 113.887990 17.567643 107.268199 2.482754 88.671102 -9.774975 73.688159 -11.236126 62.659725 13.031384 50.597288 33.178980 84.483138 36.731012 107.572623 32.198916</gml:posList>
+              </gml:LinearRing>
+            </gml:exterior>
+          </gml:Polygon>
+        </gpml:geometry>
+      </gpml:UnclassifiedFeature>
+    </gpml:featureMember>
+
+    <gpml:featureMember>
+      <gpml:UnclassifiedFeature gml:id="feature-craton-1">
+        <gpml:name>Craton 1</gpml:name>
+        <gpml:description>craton-polygon</gpml:description>
+        <gpml:reconstructionPlateId>0</gpml:reconstructionPlateId>
+        <gpml:validTime>
+          <gpml:TimePeriod>
+            <gpml:begin>0.0</gpml:begin>
+            <gpml:end>1000.0</gpml:end>
+          </gpml:TimePeriod>
+        </gpml:validTime>
+        <gpml:geometry>
+          <gml:Polygon srsName="urn:ogc:def:crs:EPSG::4326">
+            <gml:exterior>
+              <gml:LinearRing>
+                <gml:posList>102.951095 26.715446 106.279415 16.410511 102.909333 13.341621 92.743743 14.750094 87.859693 23.782665 95.650334 30.397616 102.951095 26.715446</gml:posList>
+              </gml:LinearRing>
+            </gml:exterior>
+          </gml:Polygon>
+        </gpml:geometry>
+      </gpml:UnclassifiedFeature>
+    </gpml:featureMember>
+</gpml:FeatureCollection>

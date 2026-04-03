@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpml:FeatureCollection
+  xmlns:gpml="http://www.gplates.org/gplates"
+  xmlns:gml="http://www.opengis.net/gml"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.gplates.org/gplates gpml.xsd">
+  <gpml:metadata>
+    <gpml:creator>GeoForge manual export</gpml:creator>
+    <gpml:created>2026-04-03T01:07:42.535Z</gpml:created>
+  </gpml:metadata>
+
+    <gpml:featureMember>
+      <gpml:UnclassifiedFeature gml:id="feature-supercontinent-1">
+        <gpml:name>Supercontinent</gpml:name>
+        <gpml:description>supercontinent-outline</gpml:description>
+        <gpml:reconstructionPlateId>0</gpml:reconstructionPlateId>
+        <gpml:validTime>
+          <gpml:TimePeriod>
+            <gpml:begin>0.0</gpml:begin>
+            <gpml:end>1000.0</gpml:end>
+          </gpml:TimePeriod>
+        </gpml:validTime>
+        <gpml:geometry>
+          <gml:Polygon srsName="urn:ogc:def:crs:EPSG::4326">
+            <gml:exterior>
+              <gml:LinearRing>
+                <gml:posList>100.441592 25.565104 119.593253 13.652997 114.064602 -10.781148 107.348072 -21.512571 84.838084 -19.693636 62.043094 0.545932 58.079317 18.015561 84.508876 25.082247 100.441592 25.565104</gml:posList>
+              </gml:LinearRing>
+            </gml:exterior>
+          </gml:Polygon>
+        </gpml:geometry>
+      </gpml:UnclassifiedFeature>
+    </gpml:featureMember>
+
+    <gpml:featureMember>
+      <gpml:UnclassifiedFeature gml:id="feature-craton-1">
+        <gpml:name>Craton 1</gpml:name>
+        <gpml:description>craton-polygon</gpml:description>
+        <gpml:reconstructionPlateId>0</gpml:reconstructionPlateId>
+        <gpml:validTime>
+          <gpml:TimePeriod>
+            <gpml:begin>0.0</gpml:begin>
+            <gpml:end>1000.0</gpml:end>
+          </gpml:TimePeriod>
+        </gpml:validTime>
+        <gpml:geometry>
+          <gml:Polygon srsName="urn:ogc:def:crs:EPSG::4326">
+            <gml:exterior>
+              <gml:LinearRing>
+                <gml:posList>105.027449 19.849583 107.370057 6.830652 105.138748 3.217860 94.180911 10.632538 91.984820 18.212744 94.935648 19.688983 105.027449 19.849583</gml:posList>
+              </gml:LinearRing>
+            </gml:exterior>
+          </gml:Polygon>
+        </gpml:geometry>
+      </gpml:UnclassifiedFeature>
+    </gpml:featureMember>
+
+    <gpml:featureMember>
+      <gpml:UnclassifiedFeature gml:id="feature-rift-1">
+        <gpml:name>Auto-generated Rift</gpml:name>
+        <gpml:description>rift-line</gpml:description>
+        <gpml:reconstructionPlateId>0</gpml:reconstructionPlateId>
+        <gpml:validTime>
+          <gpml:TimePeriod>
+            <gpml:begin>0.0</gpml:begin>
+            <gpml:end>1000.0</gpml:end>
+          </gpml:TimePeriod>
+        </gpml:validTime>
+        <gpml:geometry>
+          <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+            <gml:posList>59.079317 17.565104 60.079317 16.565104 61.079317 15.565104 62.079317 14.565104 63.079317 13.565104 64.079317 12.565104 65.079317 11.565104 66.079317 10.565104 67.079317 9.565104 68.079317 8.565104 69.079317 7.565104 70.079317 6.565104 71.079317 5.565104 72.079317 4.565104 73.079317 3.565104 74.079317 2.565104 75.079317 1.565104 76.079317 0.565104 77.079317 -0.434896 78.079317 -1.434896 79.079317 -2.434896 80.079317 -3.434896 81.079317 -4.434896 82.079317 -5.434896 83.079317 -6.434896 84.079317 -7.434896 85.079317 -8.434896 86.079317 -9.434896 87.079317 -10.434896 88.079317 -11.434896 89.079317 -12.434896 90.079317 -13.434896 91.079317 -13.434896 92.079317 -14.434896 93.079317 -15.434896 94.079317 -15.434896 95.079317 -15.434896 96.079317 -16.434896 97.079317 -16.434896 98.079317 -17.434896 99.079317 -17.434896 100.079317 -18.434896 101.079317 -18.434896 102.079317 -19.434896 103.079317 -19.434896 104.079317 -20.434896 105.079317 -20.434896 106.079317 -20.434896 107.079317 -21.434896</gml:posList>
+          </gml:LineString>
+        </gpml:geometry>
+      </gpml:UnclassifiedFeature>
+    </gpml:featureMember>
+</gpml:FeatureCollection>

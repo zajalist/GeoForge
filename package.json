@@ -1,0 +1,23 @@
+{
+  "name": "wilson-cycles-website",
+  "version": "0.1.0",
+  "description": "Interactive Wilson Cycle plate tectonics visualization using GPlates and custom physics",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "build-wasm": "bash build-wasm.sh || cmd /c build-wasm.bat",
+    "server": "node server.js"
+  },
+  "dependencies": {
+    "lucide-react": "^1.7.0",
+    "next": "^16.2.2",
+    "numjs": "^0.16.1",
+    "pyodide": "^0.23.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "three": "^0.128.0"
+  }
+}

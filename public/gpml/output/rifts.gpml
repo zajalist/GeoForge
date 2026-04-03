@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpml:FeatureCollection
+  xmlns:gpml="http://www.gplates.org/gplates"
+  xmlns:gml="http://www.opengis.net/gml"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.gplates.org/gplates gpml.xsd">
+  <gpml:metadata>
+    <gpml:creator>GeoForge auto-rift export</gpml:creator>
+    <gpml:created>2026-04-03T00:47:05.400567+00:00</gpml:created>
+  </gpml:metadata>
+  <gpml:featureMember>
+    <gpml:Rift gml:id="rift-0-0Ma">
+      <gpml:name>Auto-generated rift (plate 0)</gpml:name>
+      <gpml:description>rift</gpml:description>
+      <gpml:reconstructionPlateId>0</gpml:reconstructionPlateId>
+      <gpml:validTime>
+        <gpml:TimePeriod>
+          <gpml:begin>0</gpml:begin>
+          <gpml:end>1000.0</gpml:end>
+        </gpml:TimePeriod>
+      </gpml:validTime>
+          <gpml:geometry>
+            <gml:Polyline srsName="urn:ogc:def:crs:EPSG::4326">
+              <gml:posList>104.307184 -13.26501 103.807184 -13.26501 103.307184 -13.26501 102.807184 -13.26501 102.307184 -13.26501 101.807184 -13.26501 101.307184 -13.26501 100.807184 -13.26501 100.307184 -13.26501 99.807184 -13.26501 99.307184 -13.26501 98.807184 -13.26501 98.307184 -13.26501 97.807184 -13.26501 97.307184 -13.26501 96.807184 -13.26501 96.307184 -13.26501 95.807184 -13.26501 95.307184 -13.26501 94.807184 -13.26501 94.307184 -13.26501 93.807184 -13.26501 93.307184 -13.26501 92.807184 -13.26501 92.307184 -13.26501 91.807184 -13.26501 91.307184 -13.26501 90.807184 -13.26501 90.307184 -13.26501 89.807184 -13.26501 89.307184 -13.26501 88.807184 -13.26501 88.307184 -13.26501 87.807184 -13.26501 87.307184 -13.26501 86.807184 -13.26501 86.307184 -13.26501 85.807184 -12.76501 85.307184 -12.26501 84.807184 -12.26501 84.307184 -11.76501 83.807184 -11.76501</gml:posList>
+            </gml:Polyline>
+          </gpml:geometry>
+      <gpml:rift_type>auto_generated</gpml:rift_type>
+      <gpml:start_point>104.3072,-13.2650</gpml:start_point>
+      <gpml:end_point>83.8072,-11.7650</gpml:end_point>
+      <gpml:total_length_km>2290.0</gpml:total_length_km>
+      <gpml:num_zigzags>14</gpml:num_zigzags>
+      <gpml:zigzag_amplitude_deg>1.5</gpml:zigzag_amplitude_deg>
+    </gpml:Rift>
+  </gpml:featureMember>
+</gpml:FeatureCollection>
