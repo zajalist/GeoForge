@@ -826,6 +826,7 @@ ${featureBlocks.join('\n')}
   }
 
   useEffect(() => {
+    
     let cancelled = false
 
     simRef.current = createManualSimulationStub()
@@ -862,14 +863,104 @@ ${featureBlocks.join('\n')}
     setSimSpeed(parsed)
   }
 
+  // Calculate heuristic candidate location based on existing continents/cratons
+  const calculateHeuristicCandidate = () => {
+    const continent = supercontinentPolygonRef.current
+    const cratons = cratonPolygonsRef.current
+
+    if (!continent.lats || continent.lats.length < 3) {
+      return null
+    }
+
+    // Compute continent centroid
+    const centroidLat = continent.lats.reduce((a, b) => a + b, 0) / continent.lats.length
+    const centroidLon = continent.lons.reduce((a, b) => a + b, 0) / continent.lons.length
+
+    // Get bounding box
+    const minLat = Math.min(...continent.lats)
+    const maxLat = Math.max(...continent.lats)
+    const minLon = Math.min(...continent.lons)
+    const maxLon = Math.max(...continent.lons)
+
+    let bestScore = -Infinity
+    let bestLat = centroidLat
+    let bestLon = centroidLon
+
+    // Grid search over continent interior (every ~2 degrees)
+    const step = 2.0
+    for (let lat = minLat; lat <= maxLat; lat += step) {
+      for (let lon = minLon; lon <= maxLon; lon += step) {
+        // Check if point is inside supercontinent
+        const inSuper = pointInPoly(lat, lon, continent.lats, continent.lons)
+        if (!inSuper) continue
+
+        // Check if point is inside any craton (avoid those)
+        let inCraton = false
+        for (const craton of cratons) {
+          if (pointInPoly(lat, lon, craton.lats, craton.lons)) {
+            inCraton = true
+            break
+          }
+        }
+        if (inCraton) continue
+
+        // Score based on latitude (equatorial plume zones) and distance from cratons
+        const latBonus = Math.cos((Math.abs(lat) * Math.PI) / 180) // Peak at equator
+        let craton_dist = Infinity
+        for (const craton of cratons) {
+          for (let i = 0; i < craton.lats.length; i++) {
+            const d = Math.sqrt(
+              (lat - craton.lats[i]) ** 2 + (lon - craton.lons[i]) ** 2
+            )
+            craton_dist = Math.min(craton_dist, d)
+          }
+        }
+        const craton_bonus = Math.min(craton_dist / 10, 0.5) // Reward for proximity to craton edges
+        const score = latBonus * 0.6 + craton_bonus * 0.4
+
+        if (score > bestScore) {
+          bestScore = score
+          bestLat = lat
+          bestLon = lon
+        }
+      }
+    }
+
+    return { lat: bestLat, lon: bestLon, score: bestScore }
+  }
+
+  const pointInPoly = (lat, lon, lats, lons) => {
+    let inside = false
+    const n = lats.length
+    let j = n - 1
+    for (let i = 0; i < n; i++) {
+      const xi = lons[i], yi = lats[i]
+      const xj = lons[j], yj = lats[j]
+      if ((yi > lat) !== (yj > lat) && lon < ((xj - xi) * (lat - yi)) / (yj - yi) + xi) {
+        inside = !inside
+      }
+      j = i
+    }
+    return inside
+  }
+
   const onPlay = () => {
     if (!isSetupCompleteRef.current) {
       setStatusText('Finish setup before playing the simulation.')
       return
     }
+
+    // Calculate and display heuristic candidate
+    const candidate = calculateHeuristicCandidate()
+    if (candidate && globeRef.current) {
+      globeRef.current.drawHeuristicCandidate(candidate.lat, candidate.lon, 0xff0000)
+      setStatusText(`Heuristic rift candidate identified at (${candidate.lat.toFixed(1)}°, ${candidate.lon.toFixed(1)}°)`)
+    } else {
+      setStatusText('Could not calculate heuristic candidate. Check continent geometry.')
+    }
+
     isPlayingRef.current = false
     setIsPlaying(false)
-    setStatusText('Automatic tectonic simulation on Play is disabled for manual workflow.')
   }
 
   const onPause = () => {

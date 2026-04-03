@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<gpml:FeatureCollection
+  xmlns:gpml="http://www.gplates.org/gplates"
+  xmlns:gml="http://www.opengis.net/gml"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="http://www.gplates.org/gplates gpml.xsd">
+  <gpml:metadata>
+    <gpml:creator>GeoForge manual export</gpml:creator>
+    <gpml:created>2026-04-03T02:19:51.787Z</gpml:created>
+  </gpml:metadata>
+
+    <gpml:featureMember>
+      <gpml:UnclassifiedFeature gml:id="feature-supercontinent-1">
+        <gpml:name>Supercontinent</gpml:name>
+        <gpml:description>supercontinent-outline</gpml:description>
+        <gpml:reconstructionPlateId>0</gpml:reconstructionPlateId>
+        <gpml:validTime>
+          <gpml:TimePeriod>
+            <gpml:begin>0.0</gpml:begin>
+            <gpml:end>1000.0</gpml:end>
+          </gpml:TimePeriod>
+        </gpml:validTime>
+        <gpml:geometry>
+          <gml:Polygon srsName="urn:ogc:def:crs:EPSG::4326">
+            <gml:exterior>
+              <gml:LinearRing>
+                <gml:posList>98.912755 5.503075 100.081860 11.187140 79.701718 14.389408 72.593238 5.166112 84.792848 -9.556728 102.900988 -2.691125 98.912755 5.503075</gml:posList>
+              </gml:LinearRing>
+            </gml:exterior>
+          </gml:Polygon>
+        </gpml:geometry>
+      </gpml:UnclassifiedFeature>
+    </gpml:featureMember>
+
+    <gpml:featureMember>
+      <gpml:UnclassifiedFeature gml:id="feature-craton-1">
+        <gpml:name>Craton 1</gpml:name>
+        <gpml:description>craton-polygon</gpml:description>
+        <gpml:reconstructionPlateId>0</gpml:reconstructionPlateId>
+        <gpml:validTime>
+          <gpml:TimePeriod>
+            <gpml:begin>0.0</gpml:begin>
+            <gpml:end>1000.0</gpml:end>
+          </gpml:TimePeriod>
+        </gpml:validTime>
+        <gpml:geometry>
+          <gml:Polygon srsName="urn:ogc:def:crs:EPSG::4326">
+            <gml:exterior>
+              <gml:LinearRing>
+                <gml:posList>94.263971 7.872259 93.754677 -1.176929 82.669935 -0.295354 81.519214 6.551710 94.263971 7.872259</gml:posList>
+              </gml:LinearRing>
+            </gml:exterior>
+          </gml:Polygon>
+        </gpml:geometry>
+      </gpml:UnclassifiedFeature>
+    </gpml:featureMember>
+
+    <gpml:featureMember>
+      <gpml:UnclassifiedFeature gml:id="feature-rift-1">
+        <gpml:name>Auto-generated Rift</gpml:name>
+        <gpml:description>rift-line</gpml:description>
+        <gpml:reconstructionPlateId>0</gpml:reconstructionPlateId>
+        <gpml:validTime>
+          <gpml:TimePeriod>
+            <gpml:begin>0.0</gpml:begin>
+            <gpml:end>1000.0</gpml:end>
+          </gpml:TimePeriod>
+        </gpml:validTime>
+        <gpml:geometry>
+          <gml:LineString srsName="urn:ogc:def:crs:EPSG::4326">
+            <gml:posList>73.557356 6.417062 74.593238 6.389408 75.593238 6.389408 76.593238 5.389408 77.593238 4.389408 78.593238 3.389408 79.593238 2.389408 80.593238 1.389408 81.593238 0.389408 81.593238 0.389408 83.593238 -0.610592 84.593238 -0.610592 85.593238 -0.610592 86.593238 -0.610592 87.593238 -1.610592 88.593238 -1.610592 89.593238 -1.610592 90.593238 -1.610592 91.593238 -1.610592 92.593238 -1.610592 93.593238 -1.610592 94.593238 -1.610592 95.593238 -1.610592 96.593238 -1.610592 97.593238 -1.610592 98.593238 -1.610592 99.593238 -1.610592 100.593238 -2.610592 101.593238 -2.610592 102.658613 -2.783020</gml:posList>
+          </gml:LineString>
+        </gpml:geometry>
+      </gpml:UnclassifiedFeature>
+    </gpml:featureMember>
+</gpml:FeatureCollection>

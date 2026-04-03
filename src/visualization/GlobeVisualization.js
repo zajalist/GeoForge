@@ -30,6 +30,7 @@ export class GlobeVisualization {
 
     this.renderer.setSize(window.innerWidth, window.innerHeight)
     this.renderer.setClearColor(0x0a0e27, 1)
+    this.renderer.sortObjects = true
     this.updateCameraPosition()
     
     // Add lighting
@@ -655,6 +656,24 @@ export class GlobeVisualization {
     
     this.tectonicsGroup.add(sphere)
     this.craton_markers.push(sphere)
+  }
+
+  /**
+   * Draw heuristic candidate marker (red dot overlay)
+   */
+  drawHeuristicCandidate(lat, lon, color = 0xff0000) {
+    const pos = this.latLonToXYZ(lat, lon).multiplyScalar(this.surfaceRadius + 0.005)
+    const geometry = new THREE.SphereGeometry(0.008, 12, 12)
+    const material = new THREE.MeshBasicMaterial({ 
+      color,
+      emissive: color,
+      emissiveIntensity: 0.8,
+      wireframe: false
+    })
+    const marker = new THREE.Mesh(geometry, material)
+    marker.position.copy(pos)
+    marker.renderOrder = 100
+    this.scene.add(marker)
   }
   
   /**
