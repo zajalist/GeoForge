@@ -1,7 +1,0 @@
-{
-  "version": 3,
-  "sources": [],
-  "sections": [
-    {"offset": {"line": 4, "column": 0}, "map": {"version":3,"sources":["file:///D:/geoforge2/wilson-cycles-website/app/layout.jsx"],"sourcesContent":["import './globals.css';\r\n\r\nexport const metadata = {\r\n  title: 'Wilson Cycles - Interactive Plate Tectonics Visualization',\r\n  description: 'Interactive Wilson Cycle plate tectonics visualization using custom physics',\r\n}\r\n\r\nexport default function RootLayout({ children }) {\r\n  return (\r\n    <html lang=\"en\">\r\n      <head></head>\r\n      <body>\r\n        {children}\r\n      </body>\r\n    </html>\r\n  );\r\n}\r\n"],"names":["metadata","title","description","RootLayout","children","lang"],"mappings":";;;;;;;;;AAEO,MAAMA,WAAW;IACtBC,OAAO;IACPC,aAAa;AACf;AAEe,SAASC,WAAW,EAAEC,QAAQ,EAAE;IAC7C,qBACE,8OAAC;QAAKC,MAAK;;0BACT,8OAAC;;;;;0BACD,8OAAC;0BACED;;;;;;;;;;;;AAIT"}},
-    {"offset": {"line": 48, "column": 0}, "map": {"version":3,"sources":["file:///D:/geoforge2/wilson-cycles-website/node_modules/next/src/server/route-modules/app-page/vendored/rsc/react-jsx-dev-runtime.ts"],"sourcesContent":["module.exports = (\n  require('../../module.compiled') as typeof import('../../module.compiled')\n).vendored['react-rsc']!.ReactJsxDevRuntime\n"],"names":["module","exports","require","vendored","ReactJsxDevRuntime"],"mappings":"AAAAA,OAAOC,OAAO,GACZC,QAAQ,4HACRC,QAAQ,CAAC,YAAY,CAAEC,kBAAkB","ignoreList":[0]}}]
-}
